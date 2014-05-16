@@ -1,0 +1,7 @@
+{
+  "name": "homepage",
+  "version": "0.0.1",
+  "devDependencies": {
+    "gulp": "^3.6.2"
+  }
+}
