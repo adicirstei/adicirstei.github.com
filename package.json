@@ -2,6 +2,8 @@
   "name": "homepage",
   "version": "0.0.1",
   "devDependencies": {
-    "gulp": "^3.6.2"
+    "buildbranch": "0.0.1",
+    "gulp": "^3.6.2",
+    "gulp-markdown": "^0.1.2"
   }
 }
