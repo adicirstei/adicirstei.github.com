@@ -32,19 +32,22 @@ function buildBranch(options, callback) {
     curBranch = stdout.trim();
 
     exec('git branch -D ' + options.branch, execOptions, function (err) {
+      
       if(err) {
         callback(err); return;
       }
+      console.log('deleted branch '+options.branch);
       exec('git checkout --orphan ' + options.branch, execOptions, function (err) {
         if(err) {
           callback(err); return;
         }
+        console.log('created orphan branch '+options.branch);
         exec('git rm -r --cached .', execOptions, function (err) {
           var ignore;
           if(err) {
             callback(err); return;
           }
-
+          console.log('deleting files');
           // delete all files except the untracked ones
           ignore = options.ignore.slice(0);
           fs.readdirSync(options.cwd).forEach(function(file) {
@@ -69,30 +72,33 @@ function buildBranch(options, callback) {
           fs.writeFileSync(path.join(options.cwd, '.gitignore'), ignore.join('\n'));
 
           // Commit files
-          command = 'git add .;'
-                  + ' git commit -m "' + options.commit.replace('"', '\\"') + '"';
-                  
+      
           exec('git add .', execOptions, function(err) {
             if(err) {
               callback(err); return;
             }
+            console.log('added files');
             exec('git commit -m "' + options.commit.replace('"', '\\"') + '"', execOptions, function(err) {
               if(err) {
                 callback(err); return;
               }
+              console.log('commited files');
               // Pushing commit
               exec('git push -f origin ' + options.branch, execOptions, function(err) {
                 if(err) {
                   callback(err); return;
                 }
+                console.log('pushed '+options.branch);
                 exec('git checkout ' + curBranch, execOptions, function(err) {
                   if(err) {
                     callback(err); return;
                   }
+                  console.log('switched to branch '+curBranch);
                   exec('git checkout .', execOptions, function(err) {
                     if(err) {
                       callback(err); return;
                     }
+                    
                     callback();
                   });                   
                 });                
