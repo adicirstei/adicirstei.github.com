@@ -1,5 +1,9 @@
 var gulp = require('gulp');
 
+var buildBranch = require('./buildbranch');
+
+
+
 gulp.task('default', function() {
   // place code for your default task here
 });
@@ -10,7 +14,7 @@ gulp.task('build', function() {
 });
 
 gulp.task('buildbranch', function() {
-  var buildBranch = require('buildbranch');
+  
   buildBranch({
     branch: 'master',
     ignore: ['.git', 'www', 'node_modules'],

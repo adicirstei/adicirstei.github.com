@@ -2,8 +2,8 @@
   "name": "homepage",
   "version": "0.0.1",
   "devDependencies": {
-    "buildbranch": "0.0.1",
     "gulp": "^3.6.2",
-    "gulp-markdown": "^0.1.2"
+    "gulp-markdown": "^0.1.2",
+    "rimraf": "^2.2.8"
   }
 }
