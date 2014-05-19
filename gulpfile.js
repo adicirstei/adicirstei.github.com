@@ -18,7 +18,7 @@ gulp.task('build', function () {
 
 gulp.task('templates', function () {
   var YOUR_LOCALS = {};
-  gulp.src('src/**/*.jade')
+  gulp.src('src/**/index.jade')
     .pipe(jade({
       locals: YOUR_LOCALS
     }))
