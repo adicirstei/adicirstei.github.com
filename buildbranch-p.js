@@ -32,9 +32,9 @@ function buildBranch(options, callback) {
   .then(function (stdout, stderr) {
     curBranch = stdout.trim();
     return Q.nfcall(exec, 'git branch -D ' + options.branch, execOptions);
-  })
-  .then(function () { return Q.nfcall(exec, 'git checkout --orphan ' + options.branch, execOptions); })
-  .then(function () { return Q.nfcall(exec, 'git rm -r --cached .', execOptions); })
+  }, callback)
+  .then(function () { return Q.nfcall(exec, 'git checkout --orphan ' + options.branch, execOptions); }, callback)
+  .then(function () { return Q.nfcall(exec, 'git rm -r --cached .', execOptions); }, callback)
   .then(function () {
     var ignore;
         // delete all files except the untracked ones
@@ -63,12 +63,11 @@ function buildBranch(options, callback) {
     return Q.nfcall(exec, 'git add .', execOptions);
     
   })
-  .then(function () { return Q.nfcall(exec, 'git commit -m "' + options.commit.replace('"', '\\"') + '"', execOptions); })
-  .then(function () { return Q.nfcall(exec, 'git push -f origin ' + options.branch, execOptions); })
-  .then(function () { return Q.nfcall(exec, 'git checkout ' + curBranch, execOptions); })
-  .then(function () { return Q.nfcall(exec, 'git checkout .', execOptions); })
-  .then(callback)
-  .err(callback);
+  .then(function () { return Q.nfcall(exec, 'git commit -m "' + options.commit.replace('"', '\\"') + '"', execOptions); }, callback)
+  .then(function () { return Q.nfcall(exec, 'git push -f origin ' + options.branch, execOptions); }, callback)
+  .then(function () { return Q.nfcall(exec, 'git checkout ' + curBranch, execOptions); }, callback)
+  .then(function () { return Q.nfcall(exec, 'git checkout .', execOptions); }, callback)
+  .then(callback);
 
 }
 
