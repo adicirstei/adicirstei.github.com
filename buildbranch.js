@@ -4,6 +4,7 @@ var exec = require('child_process').exec
   , path = require('path')
   , rimraf = require('rimraf')
   , fs = require('fs')
+  , Q = require('q')
 ;
 
 function buildBranch(options, callback) {
@@ -26,6 +27,13 @@ function buildBranch(options, callback) {
   // Remember the current branch
   command = 'git rev-parse --abbrev-ref HEAD'
 
+  /*
+  
+  Q.nfcall(exec, command, execOptions)
+  .then(function (err, stdout, stderr) {});
+  
+  */
+  
   exec(command, execOptions, function(err, stdout, stderr) {
     if(err) {
       callback(err); return;
