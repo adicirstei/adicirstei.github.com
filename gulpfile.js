@@ -2,7 +2,8 @@
 
 var gulp = require('gulp'),
   jade = require('gulp-jade'),
-  tap = require('gulp-tap');
+  tap = require('gulp-tap'),
+  path = require('path');
 
 var buildBranch = require('./buildbranch');
 
@@ -23,6 +24,14 @@ gulp.task('templates', function () {
       locals: YOUR_LOCALS
     }))
     .pipe(gulp.dest('./www'));
+  gulp.src('src/posts/*.md')
+    .pipe(tap(function (file, t) {
+      file.contents = new Buffer('extends ../layout\nblock content\n  include:md ' + path.basename(file.path));
+    }))
+    .pipe(jade({
+      locals: YOUR_LOCALS
+    }))
+    .pipe(gulp.dest('./www'));  
 });
 
 gulp.task('buildbranch', function () {
