@@ -1,3 +1,4 @@
+/*jslint node:true, sloppy: true */
 // Publish task
 var exec = require('child_process').exec
   , path = require('path')
