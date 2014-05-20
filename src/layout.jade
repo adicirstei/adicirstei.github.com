@@ -1,12 +1,27 @@
 doctype html
 html(lang="en")
   head
-    title pageTitle
+    meta(charset='utf-8')
+    meta(http-equiv='X-UA-Compatible', content='chrome=1')
+    title adicirstei
+    link(href='styles/styles.css')
+    link(href='styles/pygment_trac.css')
+    script(src='https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js')
+    script(src='scripts/main.js')
+    meta(name='viewport', content='width=device-width, initial-scale=1, user-scalable=no')
   body
     block header
-      ul
-        li abcd
-        li xyz
+      header
+        h1 adicirstei
+        p backend developper
+      #banner
+        span#logo
+        a.button.fork(href='https://github.com/adicirstei/adicirstei.github.io')
+          strong View On GitHub
+        #downloads
+          span Downloads:
+          ul
+            li.ZIP a(href='https://codeload.github.com/adicirstei/adicirstei.github.io/zip/source')
     block content
       :markdown
         ## un h2
