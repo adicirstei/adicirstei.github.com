@@ -19,6 +19,8 @@ gulp.task('copy', function () {
     .pipe(gulp.dest('./www/styles'));
   gulp.src('src/scripts/*.js')
     .pipe(gulp.dest('./www/scripts'));
+  gulp.src('src/images/*')
+    .pipe(gulp.dest('./www/images'));
 });
 
 
