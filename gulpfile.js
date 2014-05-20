@@ -9,11 +9,16 @@ var buildBranch = require('./buildbranch');
 
 
 
-gulp.task('default', ['templates', 'buildbranch']);
+gulp.task('default', ['templates', 'copy', 'buildbranch']);
 
 
-gulp.task('build', function () {
-  
+gulp.task('copy', function () {
+  gulp.src('src/fonts/*')
+    .pipe(gulp.dest('./www/fonts'));
+  gulp.src('src/styles/*.css')
+    .pipe(gulp.dest('./www/styles'));
+  gulp.src('src/scripts/*.js')
+    .pipe(gulp.dest('./www/scripts'));
 });
 
 
@@ -31,7 +36,7 @@ gulp.task('templates', function () {
     .pipe(jade({
       locals: YOUR_LOCALS
     }))
-    .pipe(gulp.dest('./www'));  
+    .pipe(gulp.dest('./www/posts'));
 });
 
 gulp.task('buildbranch', function () {
