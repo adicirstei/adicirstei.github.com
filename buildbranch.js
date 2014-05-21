@@ -43,7 +43,8 @@ function buildBranch(options, callback) {
     exec('git branch -D ' + options.branch, execOptions, function (err) {
       
       if(err) {
-        callback(err); return;
+        // ignore the branch deletion
+        //callback(err); return;
       }
       console.log('deleted branch '+options.branch);
       exec('git checkout --orphan ' + options.branch, execOptions, function (err) {
