@@ -1,5 +1,5 @@
 /*jslint node:true, sloppy: true */
-var buildBranch = require('./buildbranch');
+var buildBranch = require('./buildbranch-p');
 
 buildBranch({
   branch: 'master',
