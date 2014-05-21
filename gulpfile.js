@@ -3,13 +3,14 @@
 var gulp = require('gulp'),
   jade = require('gulp-jade'),
   tap = require('gulp-tap'),
-  path = require('path');
+  path = require('path'),
+  posts = [];
 
 var buildBranch = require('./buildbranch');
 
 
 
-gulp.task('default', ['templates', 'copy', 'buildbranch']);
+gulp.task('default', ['posts', 'copy', 'buildbranch']);
 
 
 gulp.task('copy', function () {
@@ -25,8 +26,8 @@ gulp.task('copy', function () {
 
 
 gulp.task('templates', function () {
-  var YOUR_LOCALS = {},
-    posts = [];
+  var YOUR_LOCALS = {};
+    
   gulp.src('src/index.jade')
     .pipe(jade({
       locals: YOUR_LOCALS
@@ -43,6 +44,12 @@ gulp.task('templates', function () {
       locals: YOUR_LOCALS
     }))
     .pipe(gulp.dest('./www/posts'));
+  
+});
+
+gulp.task('posts', ['templates'], function () {
+  var YOUR_LOCALS = {};
+    
   YOUR_LOCALS.posts = posts.reverse();
   gulp.src('src/posts/index.jade')
     .pipe(jade({
@@ -50,6 +57,7 @@ gulp.task('templates', function () {
     }))
     .pipe(gulp.dest('./www/posts'));
 });
+
 
 gulp.task('buildbranch', function () {
   
