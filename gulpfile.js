@@ -54,7 +54,7 @@ gulp.task('templates', function () {
 gulp.task('posts', ['templates'], function () {
 
   posts.reverse();
-  gulp.src('src/posts/index.jade')
+  return gulp.src('src/posts/index.jade')
     .pipe(jade({
       locals: {
         posts: posts
@@ -64,7 +64,7 @@ gulp.task('posts', ['templates'], function () {
 });
 
 
-gulp.task('buildbranch', function () {
+gulp.task('buildbranch', function (cb) {
   
   buildBranch({
     branch: 'master',
@@ -76,6 +76,9 @@ gulp.task('buildbranch', function () {
       throw err;
     }
     console.log('Published!');
+    if (cb) {
+      cb();
+    }
   });
 
 });

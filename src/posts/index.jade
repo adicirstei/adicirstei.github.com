@@ -1,5 +1,6 @@
 extends layout
 block content
+  h1.skip recent blog posts
   - var lastdate =''
   each p in posts
     - if (lastdate !== p.date)
