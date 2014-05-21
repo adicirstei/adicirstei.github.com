@@ -25,8 +25,9 @@ gulp.task('copy', function () {
 
 
 gulp.task('templates', function () {
-  var YOUR_LOCALS = {};
-  gulp.src('src/**/index.jade')
+  var YOUR_LOCALS = {},
+    posts = [];
+  gulp.src('src/index.jade')
     .pipe(jade({
       locals: YOUR_LOCALS
     }))
@@ -35,6 +36,15 @@ gulp.task('templates', function () {
     .pipe(tap(function (file, t) {
       file.contents = new Buffer('extends ../layout\nblock content\n  include:md ' + path.basename(file.path));
     }))
+    .pipe(tap(function (file, t) {
+      posts.push(path.basename(file.path, '.md') + '.html');
+    }))
+    .pipe(jade({
+      locals: YOUR_LOCALS
+    }))
+    .pipe(gulp.dest('./www/posts'));
+  YOUR_LOCALS.posts = posts.reverse();
+  gulp.src('src/posts/index.jade')
     .pipe(jade({
       locals: YOUR_LOCALS
     }))
