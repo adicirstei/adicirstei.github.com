@@ -35,10 +35,12 @@ gulp.task('templates', function () {
     .pipe(gulp.dest('./www'));
   gulp.src('src/posts/*.md')
     .pipe(tap(function (file, t) {
+      var filename = path.basename(file.path, '.md'),
+        contents = file.contents,
+        title = contents.toString().split('\n')[0] || filename;
+      title = title.replace(/^#*\s*/g, '');
       file.contents = new Buffer('extends ../layout\nblock content\n  include:md ' + path.basename(file.path));
-    }))
-    .pipe(tap(function (file, t) {
-      posts.push(path.basename(file.path, '.md') + '.html');
+      posts.push({ file: filename + '.html', title: title, date: filename.slice(0, 4) + '-' + filename.slice(4, 6) + '-' + filename.slice(6, 8)});
     }))
     .pipe(jade({
       locals: YOUR_LOCALS
@@ -48,12 +50,12 @@ gulp.task('templates', function () {
 });
 
 gulp.task('posts', ['templates'], function () {
-  var YOUR_LOCALS = {};
-    
-  YOUR_LOCALS.posts = posts.reverse();
+  posts.reverse();
   gulp.src('src/posts/index.jade')
     .pipe(jade({
-      locals: YOUR_LOCALS
+      locals: {
+        posts: posts
+      }
     }))
     .pipe(gulp.dest('./www/posts'));
 });

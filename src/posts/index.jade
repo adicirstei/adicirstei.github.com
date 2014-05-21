@@ -2,4 +2,5 @@ extends layout
 block content
   - each p in posts
     h2
-      a(href='/posts/' +p) p
+      a(href='/posts/' +p.file)= p.title
+    date= p.date
