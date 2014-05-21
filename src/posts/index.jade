@@ -1,6 +1,10 @@
 extends layout
 block content
-  - each p in posts
+  - var lastdate =''
+  each p in posts
+    - if (lastdate !== p.date)
+      date= p.date
+      - lastdate = p.date
     h2
       a(href='/posts/' +p.file)= p.title
-    date= p.date
+    
