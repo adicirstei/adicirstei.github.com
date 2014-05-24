@@ -63,6 +63,8 @@ gulp.task('posts', ['templates'], function () {
     .pipe(gulp.dest('./www/posts'));
 });
 
+gulp.task('build', ['posts', 'copy']);
+
 
 gulp.task('buildbranch', function (cb) {
   
