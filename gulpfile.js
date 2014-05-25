@@ -4,11 +4,17 @@ var gulp = require('gulp'),
   jade = require('gulp-jade'),
   tap = require('gulp-tap'),
   path = require('path'),
-  posts = [];
+  posts = [],
+  marked = require('marked');
+
+
+marked.setOptions({
+  highlight: function (code) {
+    return require('highlight.js').highlightAuto(code).value;
+  }
+});
 
 var buildBranch = require('./buildbranch');
-
-
 
 gulp.task('default', ['posts', 'copy', 'buildbranch']);
 
@@ -26,7 +32,9 @@ gulp.task('copy', function () {
 
 
 gulp.task('templates', function () {
-  var YOUR_LOCALS = {};
+  var YOUR_LOCALS = {
+    md: marked
+  };
     
   gulp.src('src/index.jade')
     .pipe(jade({
@@ -58,7 +66,8 @@ gulp.task('posts', ['templates'], function () {
     .pipe(jade({
       locals: {
         posts: posts
-      }
+      },
+      md: marked
     }))
     .pipe(gulp.dest('./www/posts'));
 });
