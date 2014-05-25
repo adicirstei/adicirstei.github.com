@@ -4,7 +4,6 @@ var exec = require('child_process').exec
   , path = require('path')
   , rimraf = require('rimraf')
   , fs = require('fs')
-  , Q = require('q')
 ;
 
 function buildBranch(options, callback) {
