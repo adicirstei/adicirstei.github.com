@@ -41,7 +41,7 @@ gulp.task('templates', function () {
       locals: YOUR_LOCALS
     }))
     .pipe(gulp.dest('./www'));
-  return gulp.src('src/posts/*.md')
+  gulp.src('src/posts/*.md')
     .pipe(tap(function (file, t) {
       var filename = path.basename(file.path, '.md'),
         contents = file.contents,
@@ -62,7 +62,7 @@ gulp.task('templates', function () {
 gulp.task('posts', ['templates'], function () {
 
   posts.reverse();
-  return gulp.src('src/posts/index.jade')
+  gulp.src('src/posts/index.jade')
     .pipe(jade({
       locals: {
         posts: posts
