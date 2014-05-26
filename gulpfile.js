@@ -9,8 +9,13 @@ var gulp = require('gulp'),
 
 
 marked.setOptions({
-  highlight: function (code) {
-    return require('highlight.js').highlightAuto(code).value;
+  highlight: function (code, lang) {
+    var hl = require('highlight.js');
+    if (hl.getLanguage(lang)) {
+      return hl.highlight(lang, code).value;
+    } else {
+      return hl.highlightAuto(code).value;
+    }
   }
 });
 
