@@ -41,13 +41,13 @@ gulp.task('templates', function () {
       locals: YOUR_LOCALS
     }))
     .pipe(gulp.dest('./www'));
-  gulp.src('src/posts/*.md')
+  return gulp.src('src/posts/*.md')
     .pipe(tap(function (file, t) {
       var filename = path.basename(file.path, '.md'),
         contents = file.contents,
         title = contents.toString().split('\n')[0] || filename;
       title = title.replace(/^#*\s*/g, '');
-      file.contents = new Buffer('extends ../layout\nblock content\n  article\n    include:md ' + path.basename(file.path));
+      file.contents = new Buffer('extends layout\nblock content\n  article\n    include:md ' + path.basename(file.path));
       
       posts.push({ file: filename + '.html', title: title, date: filename.slice(0, 4) + '-' + filename.slice(4, 6) + '-' + filename.slice(6, 8)});
 
