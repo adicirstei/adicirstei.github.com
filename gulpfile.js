@@ -4,11 +4,17 @@ var gulp = require('gulp'),
   jade = require('gulp-jade'),
   tap = require('gulp-tap'),
   path = require('path'),
-  posts = [];
+  posts = [],
+  marked = require('marked');
+
+
+marked.setOptions({
+  highlight: function (code) {
+    return require('highlight.js').highlightAuto(code).value;
+  }
+});
 
 var buildBranch = require('./buildbranch');
-
-
 
 gulp.task('default', ['posts', 'copy', 'buildbranch']);
 
@@ -26,14 +32,16 @@ gulp.task('copy', function () {
 
 
 gulp.task('templates', function () {
-  var YOUR_LOCALS = {};
+  var YOUR_LOCALS = {
+    md: marked
+  };
     
   gulp.src('src/index.jade')
     .pipe(jade({
       locals: YOUR_LOCALS
     }))
     .pipe(gulp.dest('./www'));
-  return gulp.src('src/posts/*.md')
+  gulp.src('src/posts/*.md')
     .pipe(tap(function (file, t) {
       var filename = path.basename(file.path, '.md'),
         contents = file.contents,
@@ -54,14 +62,17 @@ gulp.task('templates', function () {
 gulp.task('posts', ['templates'], function () {
 
   posts.reverse();
-  return gulp.src('src/posts/index.jade')
+  gulp.src('src/posts/index.jade')
     .pipe(jade({
       locals: {
         posts: posts
-      }
+      },
+      md: marked
     }))
     .pipe(gulp.dest('./www/posts'));
 });
+
+gulp.task('build', ['posts', 'copy']);
 
 
 gulp.task('buildbranch', function (cb) {
