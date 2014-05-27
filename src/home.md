@@ -12,4 +12,4 @@ That's how it all started.
 
 I mean the Python. Another lovely, powerfull and expressive language.
 
-Anyhow, please look at [my resume](https://docs.google.com/document/d/1h5BDqNI2YrQaCknBqcJMVV_nwj2X7HJF0of0NBzZ1No/edit?usp=sharing) if you will.
+Anyhow, please look at [my resume](https://docs.google.com/document/d/1h5BDqNI2YrQaCknBqcJMVV_nwj2X7HJF0of0NBzZ1No/pub) if you will.
