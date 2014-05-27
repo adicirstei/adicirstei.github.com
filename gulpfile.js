@@ -9,8 +9,13 @@ var gulp = require('gulp'),
 
 
 marked.setOptions({
-  highlight: function (code) {
-    return require('highlight.js').highlightAuto(code).value;
+  highlight: function (code, lang) {
+    var hl = require('highlight.js');
+    if (hl.getLanguage(lang)) {
+      return hl.highlight(lang, code).value;
+    } else {
+      return hl.highlightAuto(code).value;
+    }
   }
 });
 
@@ -47,7 +52,7 @@ gulp.task('templates', function () {
         contents = file.contents,
         title = contents.toString().split('\n')[0] || filename;
       title = title.replace(/^#*\s*/g, '');
-      file.contents = new Buffer('extends ../layout\nblock content\n  include:md ' + path.basename(file.path));
+      file.contents = new Buffer('extends layout\nblock content\n  article\n    include:md ' + path.basename(file.path));
       
       posts.push({ file: filename + '.html', title: title, date: filename.slice(0, 4) + '-' + filename.slice(4, 6) + '-' + filename.slice(6, 8)});
 
