@@ -3,6 +3,7 @@
 var gulp = require('gulp'),
   jade = require('gulp-jade'),
   tap = require('gulp-tap'),
+  rename = require('gulp-rename'),
   path = require('path'),
   posts = [],
   marked = require('marked');
@@ -74,7 +75,13 @@ gulp.task('posts', ['templates'], function () {
       },
       md: marked
     }))
-    .pipe(gulp.dest('./www/posts'));
+    .pipe(gulp.dest('./www/posts'))
+    .pipe(tap(function (file) {
+      file.contents = new Buffer(JSON.stringify({posts: posts}));
+      file.path = './www/data/posts.json';
+    }))
+//    .pipe(rename("posts.json"))
+    .pipe(gulp.dest('./www/data'));
 });
 
 gulp.task('build', ['posts', 'copy']);
