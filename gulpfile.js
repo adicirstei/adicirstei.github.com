@@ -41,7 +41,7 @@ gulp.task('templates', function () {
       locals: YOUR_LOCALS
     }))
     .pipe(gulp.dest('./www'));
-  gulp.src('src/posts/*.md')
+  return gulp.src('src/posts/*.md')
     .pipe(tap(function (file, t) {
       var filename = path.basename(file.path, '.md'),
         contents = file.contents,
