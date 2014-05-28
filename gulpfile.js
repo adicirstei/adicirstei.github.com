@@ -49,6 +49,9 @@ gulp.task('copy', function () {
     .pipe(gulp.dest('./www/scripts'));
   gulp.src('src/images/*')
     .pipe(gulp.dest('./www/images'));
+  gulp.src('src/posts/*.html')
+    .pipe(gulp.dest('./www/posts'));
+
 });
 
 
@@ -66,11 +69,13 @@ gulp.task('templates', function () {
     .pipe(tap(function (file, t) {
       var filename = path.basename(file.path, '.md'),
         contents = file.contents,
-        title = contents.toString().split('\n')[0] || filename;
-      title = title.replace(/^#*\s*/g, '');
+        title = contents.toString().split('\n')[0] || filename, 
+        newfile = filename;
+      title = title.replace(/^#*\s*/g, '').trim().replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
       file.contents = new Buffer('extends layout\nblock content\n  article\n    include:md ' + path.basename(file.path));
-      
-      posts.push({ file: filename + '.html', title: title, date: filename.slice(0, 4) + '-' + filename.slice(4, 6) + '-' + filename.slice(6, 8)});
+      newfile = title.replace(/(\s|-|_)+/g, '-').toLowerCase();
+      file.path = file.path.replace(filename, newfile);
+      posts.push({ file: newfile + '.html', title: title, md: filename + '.md', date: filename.slice(0, 4) + '-' + filename.slice(4, 6) + '-' + filename.slice(6, 8)});
 
     }))
     .pipe(jade({
