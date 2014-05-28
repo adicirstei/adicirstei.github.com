@@ -8,6 +8,7 @@ var gulp = require('gulp'),
   gulpFilter = require('gulp-filter'),
   concat = require('gulp-concat'),
   cssmin = require('gulp-minify-css'),
+  uglify = require('gulp-uglify'),
   posts = [],
   marked = require('marked');
 
@@ -45,8 +46,7 @@ gulp.task('copy', function () {
     .pipe(gulp.dest('./www/fonts'));
   gulp.src('src/styles/*.css')
     .pipe(gulp.dest('./www/styles'));
-  gulp.src('src/scripts/*.js')
-    .pipe(gulp.dest('./www/scripts'));
+
   gulp.src('src/images/*')
     .pipe(gulp.dest('./www/images'));
   gulp.src('src/posts/*.html')
@@ -54,6 +54,12 @@ gulp.task('copy', function () {
 
 });
 
+gulp.task('scripts', function () {
+  return gulp.src(['src/scripts/jquery.js', 'src/scripts/main.js'])
+    .pipe(concat('app.js'))
+    .pipe(uglify())
+    .pipe(gulp.dest('./www/scripts'));
+});
 
 gulp.task('templates', function () {
   var YOUR_LOCALS = {
@@ -69,7 +75,7 @@ gulp.task('templates', function () {
     .pipe(tap(function (file, t) {
       var filename = path.basename(file.path, '.md'),
         contents = file.contents,
-        title = contents.toString().split('\n')[0] || filename, 
+        title = contents.toString().split('\n')[0] || filename,
         newfile = filename;
       title = title.replace(/^#*\s*/g, '').trim().replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
       file.contents = new Buffer('extends layout\nblock content\n  article\n    include:md ' + path.basename(file.path));
@@ -104,7 +110,7 @@ gulp.task('posts', ['templates'], function () {
     .pipe(gulp.dest('./www/data'));
 });
 
-gulp.task('build', ['posts', 'copy', 'styles']);
+gulp.task('build', ['posts', 'copy', 'scripts', 'styles']);
 
 
 gulp.task('buildbranch', function (cb) {
