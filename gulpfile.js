@@ -33,6 +33,9 @@ gulp.task('copy', function () {
     .pipe(gulp.dest('./www/scripts'));
   gulp.src('src/images/*')
     .pipe(gulp.dest('./www/images'));
+  gulp.src('src/posts/*.html')
+    .pipe(gulp.dest('./www/posts'));
+
 });
 
 
