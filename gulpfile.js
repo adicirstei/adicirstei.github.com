@@ -4,6 +4,10 @@ var gulp = require('gulp'),
   jade = require('gulp-jade'),
   tap = require('gulp-tap'),
   path = require('path'),
+  stylus = require('gulp-stylus'),
+  gulpFilter = require('gulp-filter'),
+  concat = require('gulp-concat'),
+  cssmin = require('gulp-minify-css'),
   posts = [],
   marked = require('marked');
 
@@ -21,8 +25,20 @@ marked.setOptions({
 
 var buildBranch = require('./buildbranch');
 
-gulp.task('default', ['posts', 'copy', 'buildbranch']);
+gulp.task('default', ['build', 'buildbranch']);
 
+gulp.task('styles', function () {
+
+  var stylFilter = gulpFilter('*.styl');
+  
+  return gulp.src(['src/styles/monokai.css', 'src/styles/styles.css', 'src/styles/*.styl'])
+    .pipe(stylFilter)
+    .pipe(stylus())
+    .pipe(stylFilter.restore())
+    .pipe(concat('style.css'))
+    .pipe(cssmin())
+    .pipe(gulp.dest('./www/styles'));
+});
 
 gulp.task('copy', function () {
   gulp.src('src/fonts/*')
@@ -83,7 +99,7 @@ gulp.task('posts', ['templates'], function () {
     .pipe(gulp.dest('./www/data'));
 });
 
-gulp.task('build', ['posts', 'copy']);
+gulp.task('build', ['posts', 'copy', 'styles']);
 
 
 gulp.task('buildbranch', function (cb) {
