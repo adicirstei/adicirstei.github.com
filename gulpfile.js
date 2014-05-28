@@ -51,7 +51,7 @@ gulp.task('templates', function () {
       var filename = path.basename(file.path, '.md'),
         contents = file.contents,
         title = contents.toString().split('\n')[0] || filename;
-      title = title.replace(/^#*\s*/g, '');
+      title = title.replace(/^#*\s*/g, '').trim().replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
       file.contents = new Buffer('extends layout\nblock content\n  article\n    include:md ' + path.basename(file.path));
       
       posts.push({ file: filename + '.html', title: title, date: filename.slice(0, 4) + '-' + filename.slice(4, 6) + '-' + filename.slice(6, 8)});
