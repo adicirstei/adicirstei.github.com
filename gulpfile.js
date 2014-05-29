@@ -63,7 +63,6 @@ gulp.task('scripts', function () {
 
 gulp.task('templates', function () {
   var YOUR_LOCALS = {
-    md: marked
   };
     
   gulp.src('src/index.jade')
@@ -85,7 +84,8 @@ gulp.task('templates', function () {
 
     }))
     .pipe(jade({
-      locals: YOUR_LOCALS
+      locals: YOUR_LOCALS,
+      md: marked
     }))
     .pipe(gulp.dest('./www/posts'));
   
