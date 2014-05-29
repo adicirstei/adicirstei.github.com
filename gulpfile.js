@@ -77,7 +77,9 @@ gulp.task('templates', function () {
         title = contents.toString().split('\n')[0] || filename,
         newfile = filename;
       title = title.replace(/^#*\s*/g, '').trim().replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
-      file.contents = new Buffer('extends layout\nblock content\n  article\n    include:md ' + path.basename(file.path));
+      file.contents = new Buffer("extends layout\nblock seo\n  title adicirstei/blog/" + title +
+                                 "\n  meta(name='description', content='adicirstei home page and blog and " + title +
+                                 "')\nblock content\n  article\n    include:md " + path.basename(file.path));
       newfile = title.replace(/(\s|-|_)+/g, '-').toLowerCase();
       file.path = file.path.replace(filename, newfile);
       posts.push({ file: newfile + '.html', title: title, md: filename + '.md', date: filename.slice(0, 4) + '-' + filename.slice(4, 6) + '-' + filename.slice(6, 8)});
