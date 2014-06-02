@@ -970,7 +970,21 @@ footer {
   }
 
   #banner {
+    position:relative;
+    top: 0;
+  }
+  #banner .downloads {
+    margin: 0;
+  }
+  #banner .fork {
     display: none;
+  }
+  #banner #logo, #banner span{
+    display: none;
+  }
+  #banner ul li, #banner ul {
+    width: 100%;
+    clear: both;
   }
 
   header ul {
