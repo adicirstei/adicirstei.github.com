@@ -66,24 +66,25 @@ gulp.task('templates', function () {
   var YOUR_LOCALS = {
   };
     
-  gulp.src('src/index.jade')
-    .pipe(jade({
-      locals: YOUR_LOCALS
-    }))
-    .pipe(gulp.dest('./www'));
   return gulp.src('src/posts/*.md')
     .pipe(tap(function (file, t) {
+      var m = {summary:'', title:''}
       var filename = path.basename(file.path, '.md'),
-        contents = file.contents,
-        title = contents.toString().split('\n')[0] || filename,
+        contents = file.contents.toString(),
+        m = meta.extract(contents),
+        title = m.title || filename,
+        //title =  filename,
         newfile = filename;
-      title = title.replace(/^#*\s*/g, '').trim().replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
+
+      //title = title.replace(/^#*\s*/g, '').trim().replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
       file.contents = new Buffer("extends layout\nblock seo\n  title adicirstei/blog/" + title +
-                                 "\n  meta(name='description', content='adicirstei home page and blog and " + title +
+                                 "\n  meta(name='description', content='adicirstei home page and blog and;" 
+                                 + m.summary.replace(/\r|\r\n|\n\r|\n/g, '').replace(/['"]/g, '') + "; "
+                                 + title +
                                  "')\nblock content\n  article\n    include:md " + path.basename(file.path));
       newfile = title.replace(/(\s|[,.\-_])+/g, '-').toLowerCase();
       file.path = file.path.replace(filename, newfile);
-      posts.push({ file: newfile + '.html', title: title, md: filename + '.md', date: filename.slice(0, 4) + '-' + filename.slice(4, 6) + '-' + filename.slice(6, 8)});
+      posts.push({content: contents, summary: m.summary, file: newfile + '.html', title: title, md: filename + '.md', date: filename.slice(0, 4) + '-' + filename.slice(4, 6) + '-' + filename.slice(6, 8)});
 
     }))
     .pipe(jade({
@@ -91,12 +92,22 @@ gulp.task('templates', function () {
       md: marked
     }))
     .pipe(gulp.dest('./www/posts'));
-  
+
 });
 
 gulp.task('posts', ['templates'], function () {
-
+  var lastpost;
   posts.reverse();
+  lastpost = posts[0];
+  
+  gulp.src('src/index.jade')
+    .pipe(jade({
+      locals: {
+        lastpost: lastpost.content
+      }
+    }))
+    .pipe(gulp.dest('./www'));
+
   gulp.src('src/posts/index.jade')
     .pipe(jade({
       locals: {
