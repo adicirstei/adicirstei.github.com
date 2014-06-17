@@ -9,6 +9,7 @@ var gulp = require('gulp'),
   concat = require('gulp-concat'),
   cssmin = require('gulp-minify-css'),
   uglify = require('gulp-uglify'),
+  meta = require('md-meta'),
   posts = [],
   marked = require('marked');
 
