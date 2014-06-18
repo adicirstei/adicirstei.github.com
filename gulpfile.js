@@ -92,7 +92,6 @@ gulp.task('templates', function () {
       md: marked
     }))
     .pipe(gulp.dest('./www/posts'));
-
 });
 
 gulp.task('posts', ['templates'], function () {
@@ -102,8 +101,9 @@ gulp.task('posts', ['templates'], function () {
   
   gulp.src('src/index.jade')
     .pipe(jade({
+      md: marked,
       locals: {
-        lastpost: lastpost.content
+        lastpost: marked(lastpost.content)
       }
     }))
     .pipe(gulp.dest('./www'));
