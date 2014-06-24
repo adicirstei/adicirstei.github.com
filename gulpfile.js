@@ -33,7 +33,7 @@ gulp.task('styles', function () {
 
   var stylFilter = gulpFilter('*.styl');
   
-  return gulp.src(['src/styles/monokai.css', 'src/styles/styles.css', 'src/styles/*.styl'])
+  return gulp.src(['src/styles/monokai.css', 'src/styles/normalize.css', 'src/styles/main.css', 'src/styles/*.styl'])
     .pipe(stylFilter)
     .pipe(stylus())
     .pipe(stylFilter.restore())
@@ -56,7 +56,7 @@ gulp.task('copy', function () {
 });
 
 gulp.task('scripts', function () {
-  return gulp.src(['src/scripts/jquery.js', 'src/scripts/main.js'])
+  return gulp.src(['src/scripts/vendor/modernizr-2.7.1.min.js', 'src/scripts/vendor/jquery-2.1.0.js', 'src/scripts/vendor/helper.js', 'src/scripts/main.js'])
     .pipe(concat('app.js'))
     .pipe(uglify())
     .pipe(gulp.dest('./www/scripts'));
