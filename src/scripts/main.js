@@ -28,6 +28,10 @@ $(window).resize(sectionHeight);
     event.preventDefault();    
   });
   */
+  $('a.navtoggle').on('click', function (event) {
+    event.preventDefault();
+    $('nav').toggleClass('expanded');
+  });
   sectionHeight();
   
   $('img').load(sectionHeight);

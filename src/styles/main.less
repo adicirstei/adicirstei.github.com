@@ -17,9 +17,16 @@
 1     1/16
 */
 
+
+
 article img {
   float: right;
 }
+
+section {
+  padding: 1em;
+}
+
 
 header {
   background: #4276B6;
@@ -41,9 +48,10 @@ header {
     font-size: 18px;
     margin: 0;
   }
+
 }
-nav {
-  background: #fc0 url('/images/octocat-logo.png') no-repeat;
+a.navtoggle {
+  background: #fc0 url('../images/octocat-logo.png') center center;
   width: unit(36/16, em);
   height: unit(36/16, em);
   position: absolute;
@@ -52,24 +60,61 @@ nav {
   left: 0;
   border-radius: 0.25em;
   border: 1px solid #F0B500;
+  text-indent: -1000em;
+}
+nav {
+  max-width: 300em;
+  margin: 0 auto;
+  display: none;
+  position: relative;
+  background: #fc0;
+  width: 100%;
+  z-index: 4;
+  padding-bottom: 1em;
   ul {
-    display: none;
+    padding: 1em 0 0 2em;
     list-style: none;
     li {
-      display: inline;
+      display: block;
+      text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+
+      margin-right: 2em;
+      position: relative;
+      text-transform: uppercase;
+      text-align: left;
+      border-bottom: 1px solid #DBA500;
+      a.menuitem {
+        display: block;
+        color: #FFF;
+        font-size: 1.8em;
+        line-height: 2em;
+        font-weight: normal;
+        text-decoration: none;
+      }
     }
   }
 }
 
-@media screen and (min-width:768px) {
+nav.expanded {
+  display: block;
+}
+
+@media (min-width: 48em) {
   header {
     padding-bottom: 2em;
+    a.navtoggle {
+      display: none;
+    }
   }
   nav {
-    top: 4.8em;
-    right:0;
+    display: block;
+    background: #fc0 url('../images/octocat-logo.png') right center no-repeat;
+    position: relative;
+    top: 0;
+    bottom: auto;
+    padding-bottom: 0;
     width: 75%;
-    
+    height: 36px;
     ul {
       display: inline;
       float:left;

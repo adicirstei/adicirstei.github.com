@@ -6,7 +6,7 @@ html.no-hjs
     meta(name='MobileOptimized', content='320')
     meta(name='viewport', content='width=device-width, initial-scale=1, minimal-ui')
     meta(http-equiv="cleartype", content="on")
-    meta(name="msapplication-TileImage", content="img/touch/apple-touch-icon-144x144-precomposed.png")
+    meta(name="msapplication-TileImage", content="/images/touch/apple-touch-icon-144x144-precomposed.png")
     meta(name="msapplication-TileColor", content="#222222")
     meta(name="mobile-web-app-capable", content="yes")
     meta(name="apple-mobile-web-app-capable", content="yes")
@@ -30,14 +30,15 @@ html.no-hjs
       header
         h1 adicirstei
         p backend developer
+        a.navtoggle(href='#') toggle
         nav
           ul
             li
-              a.button(href='/#about-me') about
+              a.menuitem(href='/#about-me') about
             li
-              a.button(href='/posts/') blog
+              a.menuitem(href='/posts/') blog
             li
-              a.button(href='/') home
+              a.menuitem(href='/') home
       section
         block content
       section

@@ -49,7 +49,7 @@ gulp.task('copy', function () {
   gulp.src('src/styles/*.css')
     .pipe(gulp.dest('./www/styles'));
 
-  gulp.src('src/images/*')
+  gulp.src('src/images/**/*')
     .pipe(gulp.dest('./www/images'));
   gulp.src('src/**/*.html')
     .pipe(gulp.dest('./www'));
