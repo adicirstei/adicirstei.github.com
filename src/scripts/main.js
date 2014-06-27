@@ -1,3 +1,4 @@
+/*
 var sectionHeight = function() {
   var total    = $(window).height(),
       $section = $('section').css('height','auto');
@@ -9,8 +10,8 @@ var sectionHeight = function() {
     $section.css('height','auto');
   }
 }
-
-$(window).resize(sectionHeight);
+*/
+/* $(window).resize(sectionHeight); */
 
 (function(){
   /*
@@ -32,7 +33,7 @@ $(window).resize(sectionHeight);
     event.preventDefault();
     $('nav').toggleClass('expanded');
   });
-  sectionHeight();
+  //sectionHeight();
   
-  $('img').load(sectionHeight);
+  //$('img').load(sectionHeight);
 })();
