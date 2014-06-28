@@ -1,3 +1,4 @@
+/*
 var sectionHeight = function() {
   var total    = $(window).height(),
       $section = $('section').css('height','auto');
@@ -9,10 +10,11 @@ var sectionHeight = function() {
     $section.css('height','auto');
   }
 }
-
-$(window).resize(sectionHeight);
+*/
+/* $(window).resize(sectionHeight); */
 
 (function(){
+  /*
   $("section h1:not('.skip'), section h2").each(function(){
     $("nav ul").append("<li class='tag-" + this.nodeName.toLowerCase() + "'><a href='#" + $(this).text().toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g,'') + "'>" + $(this).text() + "</a></li>");
     $(this).attr("id",$(this).text().toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g,''));
@@ -26,8 +28,12 @@ $(window).resize(sectionHeight);
     $(this).parent().addClass("active");
     event.preventDefault();    
   });
+  */
+  $('a.navtoggle').on('click', function (event) {
+    event.preventDefault();
+    $('nav').toggleClass('expanded');
+  });
+  //sectionHeight();
   
-  sectionHeight();
-  
-  $('img').load(sectionHeight);
+  //$('img').load(sectionHeight);
 })();

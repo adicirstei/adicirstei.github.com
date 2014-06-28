@@ -4,7 +4,8 @@ var gulp = require('gulp'),
   jade = require('gulp-jade'),
   tap = require('gulp-tap'),
   path = require('path'),
-  stylus = require('gulp-stylus'),
+  //stylus = require('gulp-stylus'),
+  less = require('gulp-less'),
   gulpFilter = require('gulp-filter'),
   concat = require('gulp-concat'),
   cssmin = require('gulp-minify-css'),
@@ -31,12 +32,12 @@ gulp.task('default', ['build', 'buildbranch']);
 
 gulp.task('styles', function () {
 
-  var stylFilter = gulpFilter('*.styl');
+  var lessFilter = gulpFilter('*.less');
   
-  return gulp.src(['src/styles/monokai.css', 'src/styles/styles.css', 'src/styles/*.styl'])
-    .pipe(stylFilter)
-    .pipe(stylus())
-    .pipe(stylFilter.restore())
+  return gulp.src(['src/styles/monokai.css', 'src/styles/normalize.css', 'src/styles/main.css', 'src/styles/*.less'])
+    .pipe(lessFilter)
+    .pipe(less({}))
+    .pipe(lessFilter.restore())
     .pipe(concat('style.css'))
     .pipe(cssmin())
     .pipe(gulp.dest('./www/styles'));
@@ -48,7 +49,7 @@ gulp.task('copy', function () {
   gulp.src('src/styles/*.css')
     .pipe(gulp.dest('./www/styles'));
 
-  gulp.src('src/images/*')
+  gulp.src('src/images/**/*')
     .pipe(gulp.dest('./www/images'));
   gulp.src('src/**/*.html')
     .pipe(gulp.dest('./www'));
@@ -56,7 +57,7 @@ gulp.task('copy', function () {
 });
 
 gulp.task('scripts', function () {
-  return gulp.src(['src/scripts/jquery.js', 'src/scripts/main.js'])
+  return gulp.src(['src/scripts/vendor/modernizr-2.7.1.min.js', /*'src/scripts/vendor/jquery-2.1.0.js'*/ 'src/scripts/jquery-1.11.2-pre.js' , 'src/scripts/vendor/helper.js', 'src/scripts/main.js'])
     .pipe(concat('app.js'))
     .pipe(uglify())
     .pipe(gulp.dest('./www/scripts'));
