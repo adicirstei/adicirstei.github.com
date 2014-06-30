@@ -57,7 +57,11 @@ gulp.task('copy', function () {
 });
 
 gulp.task('scripts', function () {
-  return gulp.src(['src/scripts/vendor/modernizr-2.7.1.min.js', /*'src/scripts/vendor/jquery-2.1.0.js'*/ 'src/scripts/jquery-1.11.2-pre.js' , 'src/scripts/vendor/helper.js', 'src/scripts/main.js'])
+  return gulp.src(['src/scripts/vendor/modernizr-2.7.1.min.js', /*'src/scripts/vendor/jquery-2.1.0.js'*/ 
+      'src/scripts/jquery-1.11.2-pre.js' , 
+      'src/scripts/vendor/helper.js', 
+      'src/scripts/blog.js',
+      'src/scripts/main.js'])
     .pipe(concat('app.js'))
     .pipe(uglify())
     .pipe(gulp.dest('./www/scripts'));
