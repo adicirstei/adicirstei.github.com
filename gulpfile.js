@@ -12,7 +12,9 @@ var gulp = require('gulp'),
   uglify = require('gulp-uglify'),
   meta = require('md-meta'),
   posts = [],
+  search,
   marked = require('marked');
+
 
 
 marked.setOptions({
@@ -126,6 +128,29 @@ gulp.task('posts', ['templates'], function () {
       file.path = './www/data/posts.json';
     }))
 //    .pipe(rename("posts.json"))
+    .pipe(gulp.dest('./www/data'))
+    .pipe(tap(function (file) {
+      search = posts.reduce(function (prev, curr) {
+        var words = curr.content.split(/[^\w]+/g);
+        var url = '/posts/' + curr.file;
+
+        words.forEach(function (w) {
+          if (w.length < 3) {
+            return;
+          }
+          var item = (prev.hasOwnProperty(w) ?  prev[w] : {rank: 1, urls: [url]});
+          item.rank += 1;
+          if (item.urls.indexOf(url) == -1) {
+            item.urls.push(url);
+          }
+          prev[w] = item;
+        });
+
+        return prev;
+      }, {});
+      file.contents = new Buffer(JSON.stringify(search));
+      file.path = './www/data/search.json';
+    }))  
     .pipe(gulp.dest('./www/data'));
 });
 
