@@ -27,6 +27,11 @@ section {
   padding: 1em;
 }
 
+footer {
+  background: lightgray;
+  padding: 0.5em;
+  font-size: 0.75em;
+}
 
 header {
   background: #4276B6;
@@ -91,6 +96,13 @@ nav {
         font-weight: normal;
         text-decoration: none;
       }
+      input {
+        background: #FFF68B;
+        border: solid 1px #E2BE00;
+        width: 100%;
+        line-height: 2em;
+        margin-bottom: 0.25em;
+      }
     }
   }
 }
@@ -113,8 +125,12 @@ nav.expanded {
     top: 0.75em;
     bottom: auto;
     padding: 0;
+    
+    /*
     min-width: 48em;
     width: 75%;
+    
+    */
     height: 36px;
     ul {
       display: inline;
@@ -133,7 +149,21 @@ nav.expanded {
           font-weight: normal;
           text-decoration: none;
         }
+        input {
+          width: 16em;
+        }
       }
+    }
+  }
+  section {
+    width: 46em;
+    margin: 0 auto;
+  }
+  
+  footer {
+    p {
+      margin: 0 auto;
+      width: 64em;
     }
   }
 }
