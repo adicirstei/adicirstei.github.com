@@ -46,10 +46,11 @@ gulp.task('styles', function () {
 });
 
 gulp.task('copy', function () {
-  gulp.src('src/fonts/*')
-    .pipe(gulp.dest('./www/fonts'));
-  gulp.src('src/styles/*.css')
-    .pipe(gulp.dest('./www/styles'));
+
+//  gulp.src('src/fonts/*')
+//    .pipe(gulp.dest('./www/fonts'));
+//  gulp.src('src/styles/*.css')
+//    .pipe(gulp.dest('./www/styles'));
 
   gulp.src('src/images/**/*')
     .pipe(gulp.dest('./www/images'));
