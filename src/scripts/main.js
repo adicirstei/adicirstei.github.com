@@ -1,11 +1,10 @@
-
-
 (function(global){
+  'use strict';
   var blog = global.blog || {};
   
-  $('a.navtoggle').on('click', function (event) {
-    event.preventDefault();
-    $('nav').toggleClass('expanded');
+  var cat = global.document.querySelector('a.navtoggle');
+  cat.addEventListener('click', function (ev) {
+    ev.preventDefault();
+    global.document.querySelector('nav').classList.toggle('expanded');
   });
-  
 })(window);
