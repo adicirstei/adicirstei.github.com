@@ -36,7 +36,11 @@ gulp.task('styles', function () {
 
   var lessFilter = gulpFilter('*.less');
   
-  return gulp.src(['src/styles/monokai.css', 'src/styles/normalize.css', 'src/styles/main.css', 'src/styles/*.less'])
+  gulp.src(['src/styles/desktop.less'])
+    .pipe(less({}))
+    .pipe(cssmin())
+    .pipe(gulp.dest('./www/styles'));
+  return gulp.src(['src/styles/monokai.css', 'src/styles/normalize.css', 'src/styles/main.css', 'src/styles/main.less'])
     .pipe(lessFilter)
     .pipe(less({}))
     .pipe(lessFilter.restore())
