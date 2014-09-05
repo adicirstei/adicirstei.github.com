@@ -85,18 +85,24 @@ gulp.task('templates', function () {
         contents = file.contents.toString(),
         m = meta.extract(contents),
         title = m.title || filename,
-        //title =  filename,
+        date = filename.slice(0, 4) + '-' + filename.slice(4, 6) + '-' + filename.slice(6, 8),
         newfile = filename;
-
+      YOUR_LOCALS.postdate = date;
       //title = title.replace(/^#*\s*/g, '').trim().replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
       file.contents = new Buffer("extends layout\nblock seo\n  title adicirstei/blog/" + title +
                                  "\n  meta(name='description', content='adicirstei home page and blog and;" 
                                  + m.summary.replace(/\r|\r\n|\n\r|\n/g, '').replace(/['"]/g, '') + "; "
                                  + title +
-                                 "')\nblock content\n  article\n    include:md " + path.basename(file.path));
+                                 "')\nblock content\n  article\n    date= postdate\n    include:md " + path.basename(file.path));
       newfile = title.replace(/(\s|[,.\-_])+/g, '-').toLowerCase();
       file.path = file.path.replace(filename, newfile);
-      posts.push({content: contents, summary: m.summary, file: newfile + '.html', title: title, md: filename + '.md', date: filename.slice(0, 4) + '-' + filename.slice(4, 6) + '-' + filename.slice(6, 8)});
+      posts.push({
+        content: contents, 
+        summary: m.summary, 
+        file: newfile + '.html', 
+        title: title, 
+        md: filename + '.md', 
+        date: date});
 
     }))
     .pipe(jade({
