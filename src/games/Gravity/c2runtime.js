@@ -16380,6 +16380,156 @@ cr.plugins_.Touch = function(runtime)
 	};
 	pluginProto.exps = new Exps();
 }());
+;
+;
+cr.behaviors.Fade = function(runtime)
+{
+	this.runtime = runtime;
+};
+(function ()
+{
+	var behaviorProto = cr.behaviors.Fade.prototype;
+	behaviorProto.Type = function(behavior, objtype)
+	{
+		this.behavior = behavior;
+		this.objtype = objtype;
+		this.runtime = behavior.runtime;
+	};
+	var behtypeProto = behaviorProto.Type.prototype;
+	behtypeProto.onCreate = function()
+	{
+	};
+	behaviorProto.Instance = function(type, inst)
+	{
+		this.type = type;
+		this.behavior = type.behavior;
+		this.inst = inst;				// associated object instance to modify
+		this.runtime = type.runtime;
+	};
+	var behinstProto = behaviorProto.Instance.prototype;
+	behinstProto.onCreate = function()
+	{
+		var active_at_start = this.properties[0] === 1;
+		this.fadeInTime = this.properties[1];
+		this.waitTime = this.properties[2];
+		this.fadeOutTime = this.properties[3];
+		this.destroy = this.properties[4];			// 0 = no, 1 = after fade out
+		this.stage = active_at_start ? 0 : 3;		// 0 = fade in, 1 = wait, 2 = fade out, 3 = done
+		if (this.recycled)
+			this.stageTime.reset();
+		else
+			this.stageTime = new cr.KahanAdder();
+		this.maxOpacity = (this.inst.opacity ? this.inst.opacity : 1.0);
+		if (active_at_start)
+		{
+			if (this.fadeInTime === 0)
+			{
+				this.stage = 1;
+				if (this.waitTime === 0)
+					this.stage = 2;
+			}
+			else
+			{
+				this.inst.opacity = 0;
+				this.runtime.redraw = true;
+			}
+		}
+	};
+	behinstProto.saveToJSON = function ()
+	{
+		return {
+			"fit": this.fadeInTime,
+			"wt": this.waitTime,
+			"fot": this.fadeOutTime,
+			"s": this.stage,
+			"st": this.stageTime.sum,
+			"mo": this.maxOpacity,
+		};
+	};
+	behinstProto.loadFromJSON = function (o)
+	{
+		this.fadeInTime = o["fit"];
+		this.waitTime = o["wt"];
+		this.fadeOutTime = o["fot"];
+		this.stage = o["s"];
+		this.stageTime.reset();
+		this.stageTime.sum = o["st"];
+		this.maxOpacity = o["mo"];
+	};
+	behinstProto.tick = function ()
+	{
+		this.stageTime.add(this.runtime.getDt(this.inst));
+		if (this.stage === 0)
+		{
+			this.inst.opacity = (this.stageTime.sum / this.fadeInTime) * this.maxOpacity;
+			this.runtime.redraw = true;
+			if (this.inst.opacity >= this.maxOpacity)
+			{
+				this.inst.opacity = this.maxOpacity;
+				this.stage = 1;	// wait stage
+				this.stageTime.reset();
+			}
+		}
+		if (this.stage === 1)
+		{
+			if (this.stageTime.sum >= this.waitTime)
+			{
+				this.stage = 2;	// fade out stage
+				this.stageTime.reset();
+			}
+		}
+		if (this.stage === 2)
+		{
+			if (this.fadeOutTime !== 0)
+			{
+				this.inst.opacity = this.maxOpacity - ((this.stageTime.sum / this.fadeOutTime) * this.maxOpacity);
+				this.runtime.redraw = true;
+				if (this.inst.opacity < 0)
+				{
+					this.inst.opacity = 0;
+					this.stage = 3;	// done
+					this.stageTime.reset();
+					this.runtime.trigger(cr.behaviors.Fade.prototype.cnds.OnFadeOutEnd, this.inst);
+					if (this.destroy === 1)
+						this.runtime.DestroyInstance(this.inst);
+				}
+			}
+		}
+	};
+	behinstProto.doStart = function ()
+	{
+		this.stage = 0;
+		this.stageTime.reset();
+		if (this.fadeInTime === 0)
+		{
+			this.stage = 1;
+			if (this.waitTime === 0)
+				this.stage = 2;
+		}
+		else
+		{
+			this.inst.opacity = 0;
+			this.runtime.redraw = true;
+		}
+	};
+	function Cnds() {};
+	Cnds.prototype.OnFadeOutEnd = function ()
+	{
+		return true;
+	};
+	behaviorProto.cnds = new Cnds();
+	function Acts() {};
+	Acts.prototype.StartFade = function ()
+	{
+		if (this.stage === 3)
+			this.doStart();
+	};
+	Acts.prototype.RestartFade = function ()
+	{
+		this.doStart();
+	};
+	behaviorProto.acts = new Acts();
+}());
 var Box2D = {};
 Box2D.Dynamics         = {};
 Box2D.Dynamics.Joints  = {};
@@ -29081,156 +29231,6 @@ cr.behaviors.Physics = function(runtime)
 }());
 ;
 ;
-cr.behaviors.Timer = function(runtime)
-{
-	this.runtime = runtime;
-};
-(function ()
-{
-	var behaviorProto = cr.behaviors.Timer.prototype;
-	behaviorProto.Type = function(behavior, objtype)
-	{
-		this.behavior = behavior;
-		this.objtype = objtype;
-		this.runtime = behavior.runtime;
-	};
-	var behtypeProto = behaviorProto.Type.prototype;
-	behtypeProto.onCreate = function()
-	{
-	};
-	behaviorProto.Instance = function(type, inst)
-	{
-		this.type = type;
-		this.behavior = type.behavior;
-		this.inst = inst;				// associated object instance to modify
-		this.runtime = type.runtime;
-	};
-	var behinstProto = behaviorProto.Instance.prototype;
-	behinstProto.onCreate = function()
-	{
-		this.timers = {};
-	};
-	behinstProto.onDestroy = function ()
-	{
-		cr.wipe(this.timers);
-	};
-	behinstProto.saveToJSON = function ()
-	{
-		var o = {};
-		var p, t;
-		for (p in this.timers)
-		{
-			if (this.timers.hasOwnProperty(p))
-			{
-				t = this.timers[p];
-				o[p] = {
-					"c": t.current.sum,
-					"t": t.total.sum,
-					"d": t.duration,
-					"r": t.regular
-				};
-			}
-		}
-		return o;
-	};
-	behinstProto.loadFromJSON = function (o)
-	{
-		this.timers = {};
-		var p;
-		for (p in o)
-		{
-			if (o.hasOwnProperty(p))
-			{
-				this.timers[p] = {
-					current: new cr.KahanAdder(),
-					total: new cr.KahanAdder(),
-					duration: o[p]["d"],
-					regular: o[p]["r"]
-				};
-				this.timers[p].current.sum = o[p]["c"];
-				this.timers[p].total.sum = o[p]["t"];
-			}
-		}
-	};
-	behinstProto.tick = function ()
-	{
-		var dt = this.runtime.getDt(this.inst);
-		var p, t;
-		for (p in this.timers)
-		{
-			if (this.timers.hasOwnProperty(p))
-			{
-				t = this.timers[p];
-				t.current.add(dt);
-				t.total.add(dt);
-			}
-		}
-	};
-	behinstProto.tick2 = function ()
-	{
-		var p, t;
-		for (p in this.timers)
-		{
-			if (this.timers.hasOwnProperty(p))
-			{
-				t = this.timers[p];
-				if (t.current.sum >= t.duration)
-				{
-					if (t.regular)
-						t.current.sum -= t.duration;
-					else
-						delete this.timers[p];
-				}
-			}
-		}
-	};
-	function Cnds() {};
-	Cnds.prototype.OnTimer = function (tag_)
-	{
-		tag_ = tag_.toLowerCase();
-		var t = this.timers[tag_];
-		if (!t)
-			return false;
-		return t.current.sum >= t.duration;
-	};
-	behaviorProto.cnds = new Cnds();
-	function Acts() {};
-	Acts.prototype.StartTimer = function (duration_, type_, tag_)
-	{
-		this.timers[tag_.toLowerCase()] = {
-			current: new cr.KahanAdder(),
-			total: new cr.KahanAdder(),
-			duration: duration_,
-			regular: (type_ === 1)
-		};
-	};
-	Acts.prototype.StopTimer = function (tag_)
-	{
-		tag_ = tag_.toLowerCase();
-		if (this.timers.hasOwnProperty(tag_))
-			delete this.timers[tag_];
-	};
-	behaviorProto.acts = new Acts();
-	function Exps() {};
-	Exps.prototype.CurrentTime = function (ret, tag_)
-	{
-		var t = this.timers[tag_.toLowerCase()];
-		ret.set_float(t ? t.current.sum : 0);
-	};
-	Exps.prototype.TotalTime = function (ret, tag_)
-	{
-		var t = this.timers[tag_.toLowerCase()];
-		ret.set_float(t ? t.total.sum : 0);
-	};
-	Exps.prototype.Duration = function (ret, tag_)
-	{
-		var t = this.timers[tag_.toLowerCase()];
-		ret.set_float(t ? t.duration : 0);
-	};
-	behaviorProto.exps = new Exps();
-}());
-;
-;
 cr.behaviors.solid = function(runtime)
 {
 	this.runtime = runtime;
@@ -29470,10 +29470,10 @@ cr.getProjectModel = function() { return [
 			false,
 			4242281331911462,
 			[
-				["images/planet-sheet0.png", 78871, 1, 1, 128, 128, 1, 0.5, 0.5,[],[-0.3046869933605194,-0.3046869933605194,0,-0.4296875,0.3046879768371582,-0.3046869933605194,0.4374999403953552,0,0.3125,0.3125,0,0.4374999403953552,-0.3046869933605194,0.3046879768371582,-0.4296875,0],0],
-				["images/planet-sheet0.png", 78871, 131, 1, 128, 128, 1, 0.5, 0.5,[],[-0.1640619933605194,-0.1640619933605194,0,-0.2421869933605194,0.171875,-0.171875,0.25,0,0.1796879768371582,0.1796879768371582,0,0.25,-0.171875,0.171875,-0.2421869933605194,0],0],
-				["images/planet-sheet0.png", 78871, 261, 1, 128, 128, 1, 0.5, 0.5,[],[-0.3046869933605194,-0.3046869933605194,0,-0.4296875,0.3046879768371582,-0.3046869933605194,0.4374999403953552,0,0.3125,0.3125,0,0.4374999403953552,-0.3046869933605194,0.3046879768371582,-0.4296875,0],0],
-				["images/planet-sheet0.png", 78871, 1, 131, 128, 128, 1, 0.5, 0.5,[],[-0.3046869933605194,-0.3046869933605194,0,-0.4296875,0.3046879768371582,-0.3046869933605194,0.4374999403953552,0,0.3125,0.3125,0,0.4374999403953552,-0.3046869933605194,0.3046879768371582,-0.4296875,0],0]
+				["images/planet-sheet0.png", 79003, 1, 1, 128, 128, 1, 0.5, 0.5,[],[-0.3046869933605194,-0.3046869933605194,0,-0.4296875,0.3046879768371582,-0.3046869933605194,0.4374999403953552,0,0.3125,0.3125,0,0.4374999403953552,-0.3046869933605194,0.3046879768371582,-0.4296875,0],0],
+				["images/planet-sheet0.png", 79003, 131, 1, 128, 128, 1, 0.5, 0.5,[],[-0.1640619933605194,-0.1640619933605194,0,-0.2421869933605194,0.171875,-0.171875,0.25,0,0.1796879768371582,0.1796879768371582,0,0.25,-0.171875,0.171875,-0.2421869933605194,0],0],
+				["images/planet-sheet0.png", 79003, 261, 1, 128, 128, 1, 0.5, 0.5,[],[-0.3046869933605194,-0.3046869933605194,0,-0.4296875,0.3046879768371582,-0.3046869933605194,0.4374999403953552,0,0.3125,0.3125,0,0.4374999403953552,-0.3046869933605194,0.3046879768371582,-0.4296875,0],0],
+				["images/planet-sheet0.png", 79003, 1, 131, 128, 128, 1, 0.5, 0.5,[],[-0.3046869933605194,-0.3046869933605194,0,-0.4296875,0.3046879768371582,-0.3046869933605194,0.4374999403953552,0,0.3125,0.3125,0,0.4374999403953552,-0.3046869933605194,0.3046879768371582,-0.4296875,0],0]
 			]
 			]
 		],
@@ -29562,9 +29562,9 @@ cr.getProjectModel = function() { return [
 		],
 		[
 		[
-			"Timer",
-			cr.behaviors.Timer,
-			5267971057420771
+			"Fade",
+			cr.behaviors.Fade,
+			4423158640366888
 		]
 		],
 		false,
@@ -29762,21 +29762,6 @@ cr.getProjectModel = function() { return [
 					1
 				]
 			]
-,			[
-				[61.71641540527344, 131.3632659912109, 0, 30, 1, 0, 0, 1, 0, 0, 0, 0, []],
-				5,
-				4,
-				[
-				],
-				[
-				],
-				[
-					1,
-					"Default",
-					0,
-					1
-				]
-			]
 			],
 			[			]
 		]
@@ -29796,23 +29781,6 @@ cr.getProjectModel = function() { return [
 			0,
 			[
 			[
-				[720.5606689453125, -26.81834411621094, 0, 4, 4, 0, 0, 0.300000011920929, 0.5, 0.5, 0, 0, []],
-				7,
-				7,
-				[
-				],
-				[
-				[
-				]
-				],
-				[
-					0,
-					"Default",
-					0,
-					1
-				]
-			]
-,			[
 				[800.1268310546875, 199.7730102539063, 0, 415.8204956054688, 13.99964904785156, 0, 1.570796370506287, 1, 0.5, 0.5, 0, 0, []],
 				2,
 				11,
@@ -29902,6 +29870,41 @@ cr.getProjectModel = function() { return [
 			0,
 			0,
 			[
+			[
+				[98.74249267578125, 35.90806579589844, 0, 621, 89, 0, 0, 1, 0, 0, 0, 0, []],
+				8,
+				54,
+				[
+				],
+				[
+				],
+				[
+					"Aim with your mouse or finger and release the satelite out of the door",
+					0,
+					"24pt Arial",
+					"rgb(255,255,0)",
+					1,
+					0,
+					0,
+					0,
+					0
+				]
+			]
+,			[
+				[61.71641540527344, 131.3632659912109, 0, 30, 1, 0, 0, 1, 0, 0, 0, 0, []],
+				5,
+				4,
+				[
+				],
+				[
+				],
+				[
+					1,
+					"Default",
+					0,
+					1
+				]
+			]
 			],
 			[			]
 		]
@@ -29942,6 +29945,26 @@ cr.getProjectModel = function() { return [
 				[
 				],
 				[
+					0,
+					0
+				]
+			]
+,			[
+				[50, 373, 0, 621, 89, 0, 0, 1, 0, 0, 0, 0, []],
+				8,
+				105,
+				[
+				],
+				[
+				],
+				[
+					"This is a black hole. It is very heavy.",
+					0,
+					"24pt Arial",
+					"rgb(255,255,0)",
+					2,
+					0,
+					0,
 					0,
 					0
 				]
@@ -29995,7 +30018,115 @@ cr.getProjectModel = function() { return [
 				]
 			]
 ,			[
-				[738.8975219726563, 293.0890197753906, 0, 182.3615112304688, 182.3615112304688, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				[513.804931640625, -171.1950378417969, 0, 64, 64, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				4,
+				106,
+				[
+				],
+				[
+				[
+					0,
+					0,
+					0,
+					16,
+					0.5,
+					0.2,
+					0,
+					0.01,
+					0,
+					0
+				]
+				],
+				[
+					0,
+					"Default",
+					0,
+					1
+				]
+			]
+,			[
+				[419, -169, 0, 64, 64, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				4,
+				107,
+				[
+				],
+				[
+				[
+					0,
+					0,
+					0,
+					8,
+					0.5,
+					0.2,
+					0,
+					0.01,
+					0,
+					0
+				]
+				],
+				[
+					0,
+					"Default",
+					2,
+					1
+				]
+			]
+,			[
+				[514, -101, 0, 64, 64, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				4,
+				108,
+				[
+				],
+				[
+				[
+					0,
+					0,
+					0,
+					4,
+					0.5,
+					0.2,
+					0,
+					0.01,
+					0,
+					0
+				]
+				],
+				[
+					0,
+					"Default",
+					3,
+					1
+				]
+			]
+,			[
+				[419, -99, 0, 64, 64, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				4,
+				109,
+				[
+				],
+				[
+				[
+					0,
+					0,
+					0,
+					2,
+					0.5,
+					0.2,
+					0,
+					0.01,
+					0,
+					0
+				]
+				],
+				[
+					0,
+					"Default",
+					1,
+					1
+				]
+			]
+,			[
+				[667, 280, 0, 64, 64, 0, 0, 1, 0.5, 0.5, 0, 0, []],
 				4,
 				18,
 				[
@@ -30005,7 +30136,7 @@ cr.getProjectModel = function() { return [
 					0,
 					0,
 					0,
-					2,
+					16,
 					0.5,
 					0.2,
 					0,
@@ -30018,48 +30149,6 @@ cr.getProjectModel = function() { return [
 					0,
 					"Default",
 					0,
-					1
-				]
-			]
-,			[
-				[61.71641540527344, 131.3632659912109, 0, 30, 1, 0, 0, 1, 0, 0, 2, 0, []],
-				5,
-				19,
-				[
-				],
-				[
-				],
-				[
-					1,
-					"Default",
-					0,
-					1
-				]
-			]
-,			[
-				[467.5098266601563, 366.2520141601563, 0, 23.23138618469238, 23.23138618469238, 0, 0, 1, 0.5, 0.5, 0, 0, []],
-				4,
-				20,
-				[
-				],
-				[
-				[
-					0,
-					0,
-					0,
-					2,
-					0.5,
-					0.2,
-					0,
-					0.01,
-					0,
-					1
-				]
-				],
-				[
-					0,
-					"Default",
-					2,
 					1
 				]
 			]
@@ -30082,23 +30171,6 @@ cr.getProjectModel = function() { return [
 			0,
 			[
 			[
-				[720.5606689453125, -26.81834411621094, 0, 4, 4, 0, 0, 0.300000011920929, 0.5, 0.5, 0, 0, []],
-				7,
-				21,
-				[
-				],
-				[
-				[
-				]
-				],
-				[
-					0,
-					"Default",
-					0,
-					1
-				]
-			]
-,			[
 				[398.306640625, -1.136390686035156, 0, 806.72802734375, 13.99964904785156, 0, 0, 1, 0.5, 0.5, 0, 0, []],
 				2,
 				14,
@@ -30206,6 +30278,21 @@ cr.getProjectModel = function() { return [
 			0,
 			0,
 			[
+			[
+				[61.71641540527344, 131.3632659912109, 0, 30, 1, 0, 0, 1, 0, 0, 2, 0, []],
+				5,
+				19,
+				[
+				],
+				[
+				],
+				[
+					1,
+					"Default",
+					0,
+					1
+				]
+			]
 			],
 			[			]
 		]
@@ -30299,9 +30386,9 @@ cr.getProjectModel = function() { return [
 				]
 			]
 ,			[
-				[445, 184, 0, 182.3615112304688, 182.3615112304688, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				[341, 360, 0, 64, 64, 0, 0, 1, 0.5, 0.5, 0, 0, []],
 				4,
-				28,
+				110,
 				[
 				],
 				[
@@ -30322,48 +30409,6 @@ cr.getProjectModel = function() { return [
 					0,
 					"Default",
 					1,
-					1
-				]
-			]
-,			[
-				[61.71641540527344, 131.3632659912109, 0, 30, 1, 0, 0, 1, 0, 0, 0, 0, []],
-				5,
-				29,
-				[
-				],
-				[
-				],
-				[
-					1,
-					"Default",
-					0,
-					1
-				]
-			]
-,			[
-				[447, 393, 0, 84.38008880615234, 84.38008880615234, 0, 0, 1, 0.5, 0.5, 0, 0, []],
-				4,
-				30,
-				[
-				],
-				[
-				[
-					0,
-					0,
-					0,
-					2,
-					0.5,
-					0.2,
-					0,
-					0.01,
-					0,
-					1
-				]
-				],
-				[
-					0,
-					"Default",
-					2,
 					1
 				]
 			]
@@ -30386,23 +30431,6 @@ cr.getProjectModel = function() { return [
 			0,
 			[
 			[
-				[720.5606689453125, -26.81834411621094, 0, 4, 4, 0, 0, 0.300000011920929, 0.5, 0.5, 0, 0, []],
-				7,
-				31,
-				[
-				],
-				[
-				[
-				]
-				],
-				[
-					0,
-					"Default",
-					0,
-					1
-				]
-			]
-,			[
 				[211.5, 479, 0, 413, 14, 0, 0, 1, 0.5, 0.5, 0, 0, []],
 				2,
 				24,
@@ -30421,7 +30449,7 @@ cr.getProjectModel = function() { return [
 				]
 			]
 ,			[
-				[396, -14, 0, 806.72802734375, 13.99964904785156, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				[400, -1, 0, 806.72802734375, 13.99964904785156, 0, 0, 1, 0.5, 0.5, 0, 0, []],
 				2,
 				25,
 				[
@@ -30475,7 +30503,7 @@ cr.getProjectModel = function() { return [
 				]
 			]
 ,			[
-				[833, 479, 0, 485, 14, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				[699.5, 479, 0, 218, 14, 0, 0, 1, 0.5, 0.5, 0, 0, []],
 				2,
 				32,
 				[
@@ -30510,6 +30538,41 @@ cr.getProjectModel = function() { return [
 			0,
 			0,
 			[
+			[
+				[108, 276, 0, 621, 89, 0, 0, 1, 0, 0, 0, 0, []],
+				8,
+				20,
+				[
+				],
+				[
+				],
+				[
+					"This is a gas planet. It is very light.",
+					0,
+					"24pt Arial",
+					"rgb(255,255,0)",
+					0,
+					0,
+					0,
+					0,
+					0
+				]
+			]
+,			[
+				[61.71641540527344, 131.3632659912109, 0, 30, 1, 0, 0, 1, 0, 0, 0, 0, []],
+				5,
+				29,
+				[
+				],
+				[
+				],
+				[
+					1,
+					"Default",
+					0,
+					1
+				]
+			]
 			],
 			[			]
 		]
@@ -30603,9 +30666,9 @@ cr.getProjectModel = function() { return [
 				]
 			]
 ,			[
-				[232, 272, 0, 77.92304229736328, 77.92304229736328, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				[344, -144, 0, 64, 64, 0, 0, 1, 0.5, 0.5, 0, 0, []],
 				4,
-				41,
+				6,
 				[
 				],
 				[
@@ -30613,7 +30676,61 @@ cr.getProjectModel = function() { return [
 					0,
 					0,
 					0,
+					16,
+					0.5,
+					0.2,
+					0,
+					0.01,
+					0,
+					0
+				]
+				],
+				[
+					0,
+					"Default",
+					0,
+					1
+				]
+			]
+,			[
+				[250, -142, 0, 64, 64, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				4,
+				28,
+				[
+				],
+				[
+				[
+					0,
+					0,
+					0,
+					8,
+					0.5,
+					0.2,
+					0,
+					0.01,
+					0,
+					0
+				]
+				],
+				[
+					0,
+					"Default",
 					2,
+					1
+				]
+			]
+,			[
+				[576, 101, 0, 114.4727020263672, 114.4727020263672, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				4,
+				30,
+				[
+				],
+				[
+				[
+					0,
+					0,
+					0,
+					4,
 					0.5,
 					0.2,
 					0,
@@ -30630,71 +30747,29 @@ cr.getProjectModel = function() { return [
 				]
 			]
 ,			[
-				[61.71641540527344, 131.3632659912109, 0, 30, 1, 0, 0, 1, 0, 0, 0, 0, []],
-				5,
-				42,
+				[250, -72, 0, 64, 64, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				4,
+				41,
 				[
 				],
 				[
+				[
+					0,
+					0,
+					0,
+					2,
+					0.5,
+					0.2,
+					0,
+					0.01,
+					0,
+					0
+				]
 				],
 				[
+					0,
+					"Default",
 					1,
-					"Default",
-					0,
-					1
-				]
-			]
-,			[
-				[371, 285, 0, 84.38008880615234, 84.38008880615234, 0, 0, 1, 0.5, 0.5, 0, 0, []],
-				4,
-				43,
-				[
-				],
-				[
-				[
-					0,
-					0,
-					0,
-					2,
-					0.5,
-					0.2,
-					0,
-					0.01,
-					0,
-					1
-				]
-				],
-				[
-					0,
-					"Default",
-					2,
-					1
-				]
-			]
-,			[
-				[575.7216186523438, 338.2783813476563, 0, 101.8233795166016, 101.8233795166016, 0, 0, 1, 0.5, 0.5, 0, 0, []],
-				4,
-				6,
-				[
-				],
-				[
-				[
-					0,
-					0,
-					0,
-					2,
-					0.5,
-					0.2,
-					0,
-					0.01,
-					0,
-					1
-				]
-				],
-				[
-					0,
-					"Default",
-					0,
 					1
 				]
 			]
@@ -30717,23 +30792,6 @@ cr.getProjectModel = function() { return [
 			0,
 			[
 			[
-				[720.5606689453125, -26.81834411621094, 0, 4, 4, 0, 0, 0.300000011920929, 0.5, 0.5, 0, 0, []],
-				7,
-				44,
-				[
-				],
-				[
-				[
-				]
-				],
-				[
-					0,
-					"Default",
-					0,
-					1
-				]
-			]
-,			[
 				[327.442626953125, -1.136390686035156, 0, 665, 14, 0, 0, 1, 0.5, 0.5, 0, 0, []],
 				2,
 				45,
@@ -30841,6 +30899,41 @@ cr.getProjectModel = function() { return [
 			0,
 			0,
 			[
+			[
+				[105, 168, 0, 529, 89, 0, 0, 1, 0, 0, 0, 0, []],
+				8,
+				130,
+				[
+				],
+				[
+				],
+				[
+					"This is a normal density planet.",
+					0,
+					"24pt Arial",
+					"rgb(255,255,0)",
+					2,
+					0,
+					0,
+					0,
+					0
+				]
+			]
+,			[
+				[61.71641540527344, 131.3632659912109, 0, 30, 1, 0, 0, 1, 0, 0, 0, 0, []],
+				5,
+				42,
+				[
+				],
+				[
+				],
+				[
+					1,
+					"Default",
+					0,
+					1
+				]
+			]
 			],
 			[			]
 		]
@@ -30904,7 +30997,7 @@ cr.getProjectModel = function() { return [
 			0,
 			[
 			[
-				[95, 165, 0, 11.48912525177002, 11.48912525177002, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				[78, 370, 0, 11.48912525177002, 11.48912525177002, 0, 0, 1, 0.5, 0.5, 0, 0, []],
 				0,
 				51,
 				[
@@ -30934,9 +31027,90 @@ cr.getProjectModel = function() { return [
 				]
 			]
 ,			[
-				[508, 254, 0, 236.7889404296875, 236.7889404296875, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				[245, -120, 0, 64, 64, 0, 0, 1, 0.5, 0.5, 0, 0, []],
 				4,
-				52,
+				43,
+				[
+				],
+				[
+				[
+					0,
+					0,
+					0,
+					16,
+					0.5,
+					0.2,
+					0,
+					0.01,
+					0,
+					0
+				]
+				],
+				[
+					0,
+					"Default",
+					0,
+					1
+				]
+			]
+,			[
+				[499, 264, 0, 64, 64, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				4,
+				111,
+				[
+				],
+				[
+				[
+					0,
+					0,
+					0,
+					8,
+					0.5,
+					0.2,
+					0,
+					0.01,
+					0,
+					1
+				]
+				],
+				[
+					0,
+					"Default",
+					2,
+					1
+				]
+			]
+,			[
+				[246, -50, 0, 64, 64, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				4,
+				112,
+				[
+				],
+				[
+				[
+					0,
+					0,
+					0,
+					4,
+					0.5,
+					0.2,
+					0,
+					0.01,
+					0,
+					0
+				]
+				],
+				[
+					0,
+					"Default",
+					3,
+					1
+				]
+			]
+,			[
+				[151, -48, 0, 64, 64, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				4,
+				113,
 				[
 				],
 				[
@@ -30950,28 +31124,13 @@ cr.getProjectModel = function() { return [
 					0,
 					0.01,
 					0,
-					1
+					0
 				]
 				],
 				[
 					0,
 					"Default",
 					1,
-					1
-				]
-			]
-,			[
-				[61.71641540527344, 131.3632659912109, 0, 30, 1, 0, 0, 1, 0, 0, 0, 0, []],
-				5,
-				53,
-				[
-				],
-				[
-				],
-				[
-					1,
-					"Default",
-					0,
 					1
 				]
 			]
@@ -30994,24 +31153,7 @@ cr.getProjectModel = function() { return [
 			0,
 			[
 			[
-				[720.5606689453125, -26.81834411621094, 0, 4, 4, 0, 0, 0.300000011920929, 0.5, 0.5, 0, 0, []],
-				7,
-				55,
-				[
-				],
-				[
-				[
-				]
-				],
-				[
-					0,
-					"Default",
-					0,
-					1
-				]
-			]
-,			[
-				[178.942626953125, -1.136390686035156, 0, 368, 14, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				[220.942626953125, -1.136390686035156, 0, 452, 14, 0, 0, 1, 0.5, 0.5, 0, 0, []],
 				2,
 				56,
 				[
@@ -31065,7 +31207,7 @@ cr.getProjectModel = function() { return [
 				]
 			]
 ,			[
-				[800.1268310546875, 242.8627624511719, 0, 502, 14, 0, 1.570796370506287, 1, 0.5, 0.5, 0, 0, []],
+				[800.1268310546875, 239.8627624511719, 0, 496, 14, 0, 1.570796370506287, 1, 0.5, 0.5, 0, 0, []],
 				2,
 				59,
 				[
@@ -31083,7 +31225,7 @@ cr.getProjectModel = function() { return [
 				]
 			]
 ,			[
-				[725, 0, 0, 485, 14, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				[644.5, 0, 0, 324, 14, 0, 0, 1, 0.5, 0.5, 0, 0, []],
 				2,
 				60,
 				[
@@ -31118,6 +31260,41 @@ cr.getProjectModel = function() { return [
 			0,
 			0,
 			[
+			[
+				[192, 310, 0, 529, 89, 0, 0, 1, 0, 0, 0, 0, []],
+				8,
+				52,
+				[
+				],
+				[
+				],
+				[
+					"This is an above the average density planet.",
+					0,
+					"24pt Arial",
+					"rgb(255,255,0)",
+					1,
+					0,
+					0,
+					0,
+					0
+				]
+			]
+,			[
+				[61.71641540527344, 131.3632659912109, 0, 30, 1, 0, 0, 1, 0, 0, 0, 0, []],
+				5,
+				53,
+				[
+				],
+				[
+				],
+				[
+					1,
+					"Default",
+					0,
+					1
+				]
+			]
 			],
 			[			]
 		]
@@ -31160,6 +31337,87 @@ cr.getProjectModel = function() { return [
 				[
 					0,
 					0
+				]
+			]
+,			[
+				[250, -141, 0, 64, 64, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				4,
+				114,
+				[
+				],
+				[
+				[
+					0,
+					0,
+					0,
+					16,
+					0.5,
+					0.2,
+					0,
+					0.01,
+					0,
+					0
+				]
+				],
+				[
+					0,
+					"Default",
+					0,
+					1
+				]
+			]
+,			[
+				[156, -139, 0, 64, 64, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				4,
+				115,
+				[
+				],
+				[
+				[
+					0,
+					0,
+					0,
+					8,
+					0.5,
+					0.2,
+					0,
+					0.01,
+					0,
+					0
+				]
+				],
+				[
+					0,
+					"Default",
+					2,
+					1
+				]
+			]
+,			[
+				[238, 238, 0, 64, 64, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				4,
+				116,
+				[
+				],
+				[
+				[
+					0,
+					0,
+					0,
+					4,
+					0.5,
+					0.2,
+					0,
+					0.01,
+					0,
+					1
+				]
+				],
+				[
+					0,
+					"Default",
+					3,
+					1
 				]
 			]
 			],
@@ -31211,9 +31469,9 @@ cr.getProjectModel = function() { return [
 				]
 			]
 ,			[
-				[337, 182, 0, 182.3615112304688, 182.3615112304688, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				[539.2093505859375, 174.2093200683594, 0, 124.4186477661133, 124.4186477661133, 0, 0, 1, 0.5, 0.5, 0, 0, []],
 				4,
-				63,
+				117,
 				[
 				],
 				[
@@ -31234,48 +31492,6 @@ cr.getProjectModel = function() { return [
 					0,
 					"Default",
 					1,
-					1
-				]
-			]
-,			[
-				[61.71641540527344, 131.3632659912109, 0, 30, 1, 0, 0, 1, 0, 0, 0, 0, []],
-				5,
-				64,
-				[
-				],
-				[
-				],
-				[
-					1,
-					"Default",
-					0,
-					1
-				]
-			]
-,			[
-				[447, 393, 0, 84.38008880615234, 84.38008880615234, 0, 0, 1, 0.5, 0.5, 0, 0, []],
-				4,
-				65,
-				[
-				],
-				[
-				[
-					0,
-					0,
-					0,
-					2,
-					0.5,
-					0.2,
-					0,
-					0.01,
-					0,
-					1
-				]
-				],
-				[
-					0,
-					"Default",
-					2,
 					1
 				]
 			]
@@ -31298,24 +31514,7 @@ cr.getProjectModel = function() { return [
 			0,
 			[
 			[
-				[720.5606689453125, -26.81834411621094, 0, 4, 4, 0, 0, 0.300000011920929, 0.5, 0.5, 0, 0, []],
-				7,
-				66,
-				[
-				],
-				[
-				[
-				]
-				],
-				[
-					0,
-					"Default",
-					0,
-					1
-				]
-			]
-,			[
-				[63.442626953125, -1.136390686035156, 0, 137, 14, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				[2.000005722045898, 371, 0, 235, 14, 0, 1.570796370506287, 1, 0.5, 0.5, 0, 0, []],
 				2,
 				67,
 				[
@@ -31351,7 +31550,7 @@ cr.getProjectModel = function() { return [
 				]
 			]
 ,			[
-				[1.943450927734375, 237.9546813964844, 0, 492.183837890625, 13.99964904785156, 0, 1.570796370506287, 1, 0.5, 0.5, 0, 0, []],
+				[1.943458557128906, 63.86276245117188, 0, 144, 14, 0, 1.570796370506287, 1, 0.5, 0.5, 0, 0, []],
 				2,
 				69,
 				[
@@ -31387,7 +31586,7 @@ cr.getProjectModel = function() { return [
 				]
 			]
 ,			[
-				[555.5, 1, 0, 498, 14, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				[400, 1, 0, 809, 14, 0, 0, 1, 0.5, 0.5, 0, 0, []],
 				2,
 				71,
 				[
@@ -31422,6 +31621,105 @@ cr.getProjectModel = function() { return [
 			0,
 			0,
 			[
+			[
+				[61.71641540527344, 131.3632659912109, 0, 30, 1, 0, 0, 1, 0, 0, 0, 0, []],
+				5,
+				64,
+				[
+				],
+				[
+				],
+				[
+					1,
+					"Default",
+					0,
+					1
+				]
+			]
+			],
+			[			]
+		]
+		],
+		[
+		],
+		[]
+	]
+,	[
+		"End",
+		800,
+		480,
+		false,
+		"Menus",
+		6381157154273118,
+		[
+		[
+			"Layer 0",
+			0,
+			2465352585021424,
+			true,
+			[255, 255, 255],
+			false,
+			1,
+			1,
+			1,
+			false,
+			1,
+			0,
+			0,
+			[
+			[
+				[0, 0, 0, 800, 480, 0, 0, 1, 0, 0, 0, 0, []],
+				3,
+				36,
+				[
+				],
+				[
+				],
+				[
+					0,
+					0
+				]
+			]
+,			[
+				[105, 99, 0, 621, 89, 0, 0, 1, 0, 0, 0, 0, []],
+				8,
+				37,
+				[
+				],
+				[
+				],
+				[
+					"Game Over",
+					0,
+					"48pt Arial",
+					"rgb(255,255,0)",
+					1,
+					0,
+					0,
+					0,
+					0
+				]
+			]
+,			[
+				[102, 197, 0, 621, 89, 0, 0, 1, 0, 0, 0, 0, []],
+				8,
+				38,
+				[
+				],
+				[
+				],
+				[
+					"Click to start again",
+					0,
+					"24pt Arial",
+					"rgb(255,255,0)",
+					1,
+					0,
+					0,
+					0,
+					0
+				]
+			]
 			],
 			[			]
 		]
@@ -31464,6 +31762,114 @@ cr.getProjectModel = function() { return [
 				[
 					0,
 					0
+				]
+			]
+,			[
+				[285, -147, 0, 64, 64, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				4,
+				118,
+				[
+				],
+				[
+				[
+					0,
+					0,
+					0,
+					16,
+					0.5,
+					0.2,
+					0,
+					0.01,
+					0,
+					0
+				]
+				],
+				[
+					0,
+					"Default",
+					0,
+					1
+				]
+			]
+,			[
+				[191, -145, 0, 64, 64, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				4,
+				119,
+				[
+				],
+				[
+				[
+					0,
+					0,
+					0,
+					8,
+					0.5,
+					0.2,
+					0,
+					0.01,
+					0,
+					0
+				]
+				],
+				[
+					0,
+					"Default",
+					2,
+					1
+				]
+			]
+,			[
+				[286, -77, 0, 64, 64, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				4,
+				120,
+				[
+				],
+				[
+				[
+					0,
+					0,
+					0,
+					4,
+					0.5,
+					0.2,
+					0,
+					0.01,
+					0,
+					0
+				]
+				],
+				[
+					0,
+					"Default",
+					3,
+					1
+				]
+			]
+,			[
+				[191, -75, 0, 64, 64, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				4,
+				121,
+				[
+				],
+				[
+				[
+					0,
+					0,
+					0,
+					2,
+					0.5,
+					0.2,
+					0,
+					0.01,
+					0,
+					0
+				]
+				],
+				[
+					0,
+					"Default",
+					1,
+					1
 				]
 			]
 			],
@@ -31514,75 +31920,6 @@ cr.getProjectModel = function() { return [
 					1
 				]
 			]
-,			[
-				[508, 158, 0, 182.3615112304688, 182.3615112304688, 0, 0, 1, 0.5, 0.5, 0, 0, []],
-				4,
-				74,
-				[
-				],
-				[
-				[
-					0,
-					0,
-					0,
-					2,
-					0.5,
-					0.2,
-					0,
-					0.01,
-					0,
-					1
-				]
-				],
-				[
-					0,
-					"Default",
-					1,
-					1
-				]
-			]
-,			[
-				[61.71641540527344, 131.3632659912109, 0, 30, 1, 0, 0, 1, 0, 0, 0, 0, []],
-				5,
-				75,
-				[
-				],
-				[
-				],
-				[
-					1,
-					"Default",
-					0,
-					1
-				]
-			]
-,			[
-				[243, 331, 0, 118.7307891845703, 118.7307891845703, 0, 0, 1, 0.5, 0.5, 0, 0, []],
-				4,
-				76,
-				[
-				],
-				[
-				[
-					0,
-					0,
-					0,
-					2,
-					0.5,
-					0.2,
-					0,
-					0.01,
-					0,
-					1
-				]
-				],
-				[
-					0,
-					"Default",
-					2,
-					1
-				]
-			]
 			],
 			[			]
 		]
@@ -31609,6 +31946,11 @@ cr.getProjectModel = function() { return [
 				],
 				[
 				[
+					1,
+					5,
+					30,
+					29,
+					1
 				]
 				],
 				[
@@ -31691,7 +32033,7 @@ cr.getProjectModel = function() { return [
 				]
 			]
 ,			[
-				[725, 0, 0, 485, 14, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				[644.5, 0, 0, 324, 14, 0, 0, 1, 0.5, 0.5, 0, 0, []],
 				2,
 				82,
 				[
@@ -31726,6 +32068,21 @@ cr.getProjectModel = function() { return [
 			0,
 			0,
 			[
+			[
+				[61.71641540527344, 131.3632659912109, 0, 30, 1, 0, 0, 1, 0, 0, 0, 0, []],
+				5,
+				75,
+				[
+				],
+				[
+				],
+				[
+					1,
+					"Default",
+					0,
+					1
+				]
+			]
 			],
 			[			]
 		]
@@ -31819,9 +32176,9 @@ cr.getProjectModel = function() { return [
 				]
 			]
 ,			[
-				[294, 134, 0, 65.99242401123047, 65.99242401123047, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				[511, 104, 0, 64, 64, 0, 0, 1, 0.5, 0.5, 0, 0, []],
 				4,
-				85,
+				122,
 				[
 				],
 				[
@@ -31829,7 +32186,7 @@ cr.getProjectModel = function() { return [
 					0,
 					0,
 					0,
-					2,
+					16,
 					0.5,
 					0.2,
 					0,
@@ -31841,29 +32198,14 @@ cr.getProjectModel = function() { return [
 				[
 					0,
 					"Default",
-					1,
-					1
-				]
-			]
-,			[
-				[61.71641540527344, 131.3632659912109, 0, 30, 1, 0, 0, 1, 0, 0, 0, 0, []],
-				5,
-				86,
-				[
-				],
-				[
-				],
-				[
-					1,
-					"Default",
 					0,
 					1
 				]
 			]
 ,			[
-				[413, 424, 0, 163.9725646972656, 163.9725646972656, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				[245, 130, 0, 64, 64, 0, 0, 1, 0.5, 0.5, 0, 0, []],
 				4,
-				87,
+				123,
 				[
 				],
 				[
@@ -31871,7 +32213,7 @@ cr.getProjectModel = function() { return [
 					0,
 					0,
 					0,
-					2,
+					8,
 					0.5,
 					0.2,
 					0,
@@ -31884,6 +32226,33 @@ cr.getProjectModel = function() { return [
 					0,
 					"Default",
 					2,
+					1
+				]
+			]
+,			[
+				[406, 329, 0, 64, 64, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				4,
+				124,
+				[
+				],
+				[
+				[
+					0,
+					0,
+					0,
+					4,
+					0.5,
+					0.2,
+					0,
+					0.01,
+					0,
+					1
+				]
+				],
+				[
+					0,
+					"Default",
+					3,
 					1
 				]
 			]
@@ -31913,6 +32282,11 @@ cr.getProjectModel = function() { return [
 				],
 				[
 				[
+					1,
+					5,
+					30,
+					29,
+					1
 				]
 				],
 				[
@@ -32030,6 +32404,21 @@ cr.getProjectModel = function() { return [
 			0,
 			0,
 			[
+			[
+				[61.71641540527344, 131.3632659912109, 0, 30, 1, 0, 0, 1, 0, 0, 0, 0, []],
+				5,
+				86,
+				[
+				],
+				[
+				],
+				[
+					1,
+					"Default",
+					0,
+					1
+				]
+			]
 			],
 			[			]
 		]
@@ -32150,21 +32539,6 @@ cr.getProjectModel = function() { return [
 				]
 			]
 ,			[
-				[61.71641540527344, 131.3632659912109, 0, 30, 1, 0, 0, 1, 0, 0, 0, 0, []],
-				5,
-				97,
-				[
-				],
-				[
-				],
-				[
-					1,
-					"Default",
-					0,
-					1
-				]
-			]
-,			[
 				[447, 393, 0, 84.38008880615234, 84.38008880615234, 0, 0, 1, 0.5, 0.5, 0, 0, []],
 				4,
 				98,
@@ -32188,6 +32562,114 @@ cr.getProjectModel = function() { return [
 					0,
 					"Default",
 					2,
+					1
+				]
+			]
+,			[
+				[627, -150, 0, 64, 64, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				4,
+				126,
+				[
+				],
+				[
+				[
+					0,
+					0,
+					0,
+					16,
+					0.5,
+					0.2,
+					0,
+					0.01,
+					0,
+					0
+				]
+				],
+				[
+					0,
+					"Default",
+					0,
+					1
+				]
+			]
+,			[
+				[533, -148, 0, 64, 64, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				4,
+				127,
+				[
+				],
+				[
+				[
+					0,
+					0,
+					0,
+					8,
+					0.5,
+					0.2,
+					0,
+					0.01,
+					0,
+					0
+				]
+				],
+				[
+					0,
+					"Default",
+					2,
+					1
+				]
+			]
+,			[
+				[628, -80, 0, 64, 64, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				4,
+				128,
+				[
+				],
+				[
+				[
+					0,
+					0,
+					0,
+					4,
+					0.5,
+					0.2,
+					0,
+					0.01,
+					0,
+					0
+				]
+				],
+				[
+					0,
+					"Default",
+					3,
+					1
+				]
+			]
+,			[
+				[533, -78, 0, 64, 64, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				4,
+				129,
+				[
+				],
+				[
+				[
+					0,
+					0,
+					0,
+					2,
+					0.5,
+					0.2,
+					0,
+					0.01,
+					0,
+					0
+				]
+				],
+				[
+					0,
+					"Default",
+					1,
 					1
 				]
 			]
@@ -32217,6 +32699,11 @@ cr.getProjectModel = function() { return [
 				],
 				[
 				[
+					1,
+					5,
+					30,
+					29,
+					1
 				]
 				],
 				[
@@ -32299,7 +32786,7 @@ cr.getProjectModel = function() { return [
 				]
 			]
 ,			[
-				[615, -1, 0, 485, 14, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				[590, -1, 0, 435, 14, 0, 0, 1, 0.5, 0.5, 0, 0, []],
 				2,
 				104,
 				[
@@ -32334,88 +32821,19 @@ cr.getProjectModel = function() { return [
 			0,
 			0,
 			[
-			],
-			[			]
-		]
-		],
-		[
-		],
-		[]
-	]
-,	[
-		"End",
-		800,
-		480,
-		false,
-		"Menus",
-		6381157154273118,
-		[
-		[
-			"Layer 0",
-			0,
-			2465352585021424,
-			true,
-			[255, 255, 255],
-			false,
-			1,
-			1,
-			1,
-			false,
-			1,
-			0,
-			0,
 			[
-			[
-				[0, 0, 0, 800, 480, 0, 0, 1, 0, 0, 0, 0, []],
-				3,
-				36,
+				[61.71641540527344, 131.3632659912109, 0, 30, 1, 0, 0, 1, 0, 0, 0, 0, []],
+				5,
+				97,
 				[
 				],
 				[
 				],
 				[
-					0,
-					0
-				]
-			]
-,			[
-				[105, 99, 0, 621, 89, 0, 0, 1, 0, 0, 0, 0, []],
-				8,
-				37,
-				[
-				],
-				[
-				],
-				[
-					"Game Over",
-					0,
-					"48pt Arial",
-					"rgb(255,255,0)",
 					1,
+					"Default",
 					0,
-					0,
-					0,
-					0
-				]
-			]
-,			[
-				[102, 197, 0, 621, 89, 0, 0, 1, 0, 0, 0, 0, []],
-				8,
-				38,
-				[
-				],
-				[
-				],
-				[
-					"Click to start again",
-					0,
-					"24pt Arial",
-					"rgb(255,255,0)",
-					1,
-					0,
-					0,
-					0,
-					0
+					1
 				]
 			]
 			],
@@ -32491,6 +32909,40 @@ false,true,5840243009066268,false
 						0,
 						0
 					]
+				]
+				]
+			]
+,			[
+				0,
+				cr.behaviors.Physics.prototype.acts.EnableCollisions,
+				"Physics",
+				631179533216953,
+				false
+				,[
+				[
+					4,
+					4
+				]
+,				[
+					3,
+					0
+				]
+				]
+			]
+,			[
+				4,
+				cr.behaviors.Physics.prototype.acts.EnableCollisions,
+				"Physics",
+				8388149451076751,
+				false
+				,[
+				[
+					4,
+					0
+				]
+,				[
+					3,
+					0
 				]
 				]
 			]
@@ -32819,27 +33271,23 @@ false,true,5840243009066268,false
 					]
 				]
 ,				[
-					0,
-					cr.behaviors.Physics.prototype.acts.EnableCollisions,
-					"Physics",
-					2843604968262921,
+					5,
+					cr.plugins_.Sprite.prototype.acts.SetVisible,
+					null,
+					2190795679618694,
 					false
 					,[
 					[
-						4,
-						4
-					]
-,					[
 						3,
 						0
 					]
 					]
 				]
 ,				[
-					5,
-					cr.plugins_.Sprite.prototype.acts.SetVisible,
+					8,
+					cr.plugins_.Text.prototype.acts.SetVisible,
 					null,
-					2190795679618694,
+					6783225814789198,
 					false
 					,[
 					[
@@ -32982,33 +33430,6 @@ false,true,5840243009066268,false
 					[
 						0,
 						0
-					]
-				]
-				]
-			]
-,			[
-				7,
-				cr.behaviors.Timer.prototype.acts.StartTimer,
-				"Timer",
-				2784613003348023,
-				false
-				,[
-				[
-					0,
-					[
-						0,
-						120
-					]
-				]
-,				[
-					3,
-					0
-				]
-,				[
-					1,
-					[
-						2,
-						"die"
 					]
 				]
 				]
@@ -33344,7 +33765,7 @@ false,true,5840243009066268,false
 	false,
 	0,
 	0,
-	105,
+	131,
 	true,
 	true,
 	1,
