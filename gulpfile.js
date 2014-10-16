@@ -58,7 +58,7 @@ gulp.task('copy', function () {
 
   gulp.src('src/images/**/*')
     .pipe(gulp.dest('./www/images'));
-  gulp.src('src/**/*.html')
+  gulp.src(['src/**', '!src/**/*.md'])
     .pipe(gulp.dest('./www'));
 
 });
