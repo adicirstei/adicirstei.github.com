@@ -16382,6 +16382,260 @@ cr.plugins_.Touch = function(runtime)
 }());
 ;
 ;
+cr.plugins_.WebStorage = function(runtime)
+{
+	this.runtime = runtime;
+};
+(function()
+{
+	var pluginProto = cr.plugins_.WebStorage.prototype;
+	pluginProto.Type = function(plugin)
+	{
+		this.plugin = plugin;
+		this.runtime = plugin.runtime;
+	};
+	var typeProto = pluginProto.Type.prototype;
+	typeProto.onCreate = function()
+	{
+	};
+	pluginProto.Instance = function(type)
+	{
+		this.type = type;
+		this.runtime = type.runtime;
+	};
+	var instanceProto = pluginProto.Instance.prototype;
+	var prefix = "";
+	var is_arcade = (typeof window["is_scirra_arcade"] !== "undefined");
+	if (is_arcade)
+		prefix = "arcade" + window["scirra_arcade_id"];
+	var logged_sessionnotsupported = false;
+	function LogSessionNotSupported()
+	{
+		if (logged_sessionnotsupported)
+			return;
+		cr.logexport("[Construct 2] Webstorage plugin: session storage is not supported on this platform. Try using local storage or global variables instead.");
+		logged_sessionnotsupported = true;
+	};
+	instanceProto.onCreate = function()
+	{
+	};
+	function Cnds() {};
+	Cnds.prototype.LocalStorageEnabled = function()
+	{
+		return true;
+	};
+	Cnds.prototype.SessionStorageEnabled = function()
+	{
+		return true;
+	};
+	Cnds.prototype.LocalStorageExists = function(key)
+	{
+		return localStorage.getItem(prefix + key) != null;
+	};
+	Cnds.prototype.SessionStorageExists = function(key)
+	{
+		if (this.runtime.isCocoonJs || !sessionStorage)
+		{
+			LogSessionNotSupported();
+			return false;
+		}
+		return sessionStorage.getItem(prefix + key) != null;
+	};
+	Cnds.prototype.OnQuotaExceeded = function ()
+	{
+		return true;
+	};
+	Cnds.prototype.CompareKeyText = function (key, text_to_compare, case_sensitive)
+	{
+		var value = localStorage.getItem(prefix + key) || "";
+		if (case_sensitive)
+			return value == text_to_compare;
+		else
+			return cr.equals_nocase(value, text_to_compare);
+	};
+	Cnds.prototype.CompareKeyNumber = function (key, cmp, x)
+	{
+		var value = localStorage.getItem(prefix + key) || "";
+		return cr.do_cmp(parseFloat(value), cmp, x);
+	};
+	pluginProto.cnds = new Cnds();
+	function Acts() {};
+	Acts.prototype.StoreLocal = function(key, data)
+	{
+		try {
+			localStorage.setItem(prefix + key, data);
+		}
+		catch (e)
+		{
+			this.runtime.trigger(cr.plugins_.WebStorage.prototype.cnds.OnQuotaExceeded, this);
+		}
+	};
+	Acts.prototype.StoreSession = function(key,data)
+	{
+		if (this.runtime.isCocoonJs || !sessionStorage)
+		{
+			LogSessionNotSupported();
+			return;
+		}
+		try {
+			sessionStorage.setItem(prefix + key, data);
+		}
+		catch (e)
+		{
+			this.runtime.trigger(cr.plugins_.WebStorage.prototype.cnds.OnQuotaExceeded, this);
+		}
+	};
+	Acts.prototype.RemoveLocal = function(key)
+	{
+		localStorage.removeItem(prefix + key);
+	};
+	Acts.prototype.RemoveSession = function(key)
+	{
+		if (this.runtime.isCocoonJs || !sessionStorage)
+		{
+			LogSessionNotSupported();
+			return;
+		}
+		sessionStorage.removeItem(prefix + key);
+	};
+	Acts.prototype.ClearLocal = function()
+	{
+		if (!is_arcade)
+			localStorage.clear();
+	};
+	Acts.prototype.ClearSession = function()
+	{
+		if (this.runtime.isCocoonJs || !sessionStorage)
+		{
+			LogSessionNotSupported();
+			return;
+		}
+		if (!is_arcade)
+			sessionStorage.clear();
+	};
+	Acts.prototype.JSONLoad = function (json_, mode_)
+	{
+		var d;
+		try {
+			d = JSON.parse(json_);
+		}
+		catch(e) { return; }
+		if (!d["c2dictionary"])			// presumably not a c2dictionary object
+			return;
+		var o = d["data"];
+		if (mode_ === 0 && !is_arcade)	// 'set' mode: must clear webstorage first
+			localStorage.clear();
+		var p;
+		for (p in o)
+		{
+			if (o.hasOwnProperty(p))
+			{
+				try {
+					localStorage.setItem(prefix + p, o[p]);
+				}
+				catch (e)
+				{
+					this.runtime.trigger(cr.plugins_.WebStorage.prototype.cnds.OnQuotaExceeded, this);
+					return;
+				}
+			}
+		}
+	};
+	pluginProto.acts = new Acts();
+	function Exps() {};
+	Exps.prototype.LocalValue = function(ret,key)
+	{
+		ret.set_string(localStorage.getItem(prefix + key) || "");
+	};
+	Exps.prototype.SessionValue = function(ret,key)
+	{
+		if (this.runtime.isCocoonJs || !sessionStorage)
+		{
+			LogSessionNotSupported();
+			ret.set_string("");
+			return;
+		}
+		ret.set_string(sessionStorage.getItem(prefix + key) || "");
+	};
+	Exps.prototype.LocalCount = function(ret)
+	{
+		ret.set_int(is_arcade ? 0 : localStorage.length);
+	};
+	Exps.prototype.SessionCount = function(ret)
+	{
+		if (this.runtime.isCocoonJs || !sessionStorage)
+		{
+			LogSessionNotSupported();
+			ret.set_int(0);
+			return;
+		}
+		ret.set_int(is_arcade ? 0 : sessionStorage.length);
+	};
+	Exps.prototype.LocalAt = function(ret,n)
+	{
+		if (is_arcade)
+			ret.set_string("");
+		else
+			ret.set_string(localStorage.getItem(localStorage.key(n)) || "");
+	};
+	Exps.prototype.SessionAt = function(ret,n)
+	{
+		if (this.runtime.isCocoonJs || !sessionStorage)
+		{
+			LogSessionNotSupported();
+			ret.set_string("");
+			return;
+		}
+		if (is_arcade)
+			ret.set_string("");
+		else
+			ret.set_string(sessionStorage.getItem(sessionStorage.key(n)) || "");
+	};
+	Exps.prototype.LocalKeyAt = function(ret,n)
+	{
+		if (is_arcade)
+			ret.set_string("");
+		else
+			ret.set_string(localStorage.key(n) || "");
+	};
+	Exps.prototype.SessionKeyAt = function(ret,n)
+	{
+		if (this.runtime.isCocoonJs || !sessionStorage)
+		{
+			LogSessionNotSupported();
+			ret.set_string("");
+			return;
+		}
+		if (is_arcade)
+			ret.set_string("");
+		else
+			ret.set_string(sessionStorage.key(n) || "");
+	};
+	Exps.prototype.AsJSON = function (ret)
+	{
+		var o = {}, i, len, k;
+		for (i = 0, len = localStorage.length; i < len; i++)
+		{
+			k = localStorage.key(i);
+			if (is_arcade)
+			{
+				if (k.substr(0, prefix.length) === prefix)
+				{
+					o[k.substr(prefix.length)] = localStorage.getItem(k);
+				}
+			}
+			else
+				o[k] = localStorage.getItem(k);
+		}
+		ret.set_string(JSON.stringify({
+			"c2dictionary": true,
+			"data": o
+		}));
+	};
+	pluginProto.exps = new Exps();
+}());
+;
+;
 cr.behaviors.Fade = function(runtime)
 {
 	this.runtime = runtime;
@@ -29340,6 +29594,18 @@ cr.getProjectModel = function() { return [
 		false,
 		false
 	]
+,	[
+		cr.plugins_.WebStorage,
+		true,
+		false,
+		false,
+		false,
+		false,
+		false,
+		false,
+		false,
+		false
+	]
 	],
 	[
 	[
@@ -29589,6 +29855,41 @@ cr.getProjectModel = function() { return [
 		3565777683781429,
 		[],
 		null
+	]
+,	[
+		"t9",
+		cr.plugins_.Text,
+		false,
+		[],
+		0,
+		0,
+		null,
+		null,
+		[
+		],
+		false,
+		false,
+		8592405654626642,
+		[],
+		null
+	]
+,	[
+		"t10",
+		cr.plugins_.WebStorage,
+		false,
+		[],
+		0,
+		0,
+		null,
+		null,
+		[
+		],
+		false,
+		false,
+		7355652404056439,
+		[],
+		null
+		,[]
 	]
 	],
 	[
@@ -29900,6 +30201,48 @@ cr.getProjectModel = function() { return [
 				],
 				[
 					1,
+					"Default",
+					0,
+					1
+				]
+			]
+,			[
+				[12, 12, 0, 200, 30, 0, 0, 1, 0, 0, 0, 0, []],
+				9,
+				7,
+				[
+				],
+				[
+				],
+				[
+					"Score: ",
+					0,
+					"bold 14pt Arial",
+					"rgb(204,255,153)",
+					0,
+					0,
+					0,
+					0,
+					0
+				]
+			]
+,			[
+				[34.19711303710938, -136.8185119628906, 0, 4, 4, 0, 0, 1, 0.5, 0.5, 0, 0, []],
+				7,
+				65,
+				[
+				],
+				[
+				[
+					1,
+					5,
+					25,
+					30,
+					1
+				]
+				],
+				[
+					0,
 					"Default",
 					0,
 					1
@@ -30293,6 +30636,26 @@ cr.getProjectModel = function() { return [
 					1
 				]
 			]
+,			[
+				[12, 12, 0, 200, 30, 0, 0, 1, 0, 0, 0, 0, []],
+				9,
+				21,
+				[
+				],
+				[
+				],
+				[
+					"Score: ",
+					0,
+					"bold 14pt Arial",
+					"rgb(204,255,153)",
+					0,
+					0,
+					0,
+					0,
+					0
+				]
+			]
 			],
 			[			]
 		]
@@ -30571,6 +30934,26 @@ cr.getProjectModel = function() { return [
 					"Default",
 					0,
 					1
+				]
+			]
+,			[
+				[12, 12, 0, 200, 30, 0, 0, 1, 0, 0, 0, 0, []],
+				9,
+				31,
+				[
+				],
+				[
+				],
+				[
+					"Score: ",
+					0,
+					"bold 14pt Arial",
+					"rgb(204,255,153)",
+					0,
+					0,
+					0,
+					0,
+					0
 				]
 			]
 			],
@@ -30934,6 +31317,26 @@ cr.getProjectModel = function() { return [
 					1
 				]
 			]
+,			[
+				[12, 12, 0, 200, 30, 0, 0, 1, 0, 0, 0, 0, []],
+				9,
+				44,
+				[
+				],
+				[
+				],
+				[
+					"Score: ",
+					0,
+					"bold 14pt Arial",
+					"rgb(204,255,153)",
+					0,
+					0,
+					0,
+					0,
+					0
+				]
+			]
 			],
 			[			]
 		]
@@ -31295,6 +31698,26 @@ cr.getProjectModel = function() { return [
 					1
 				]
 			]
+,			[
+				[12, 12, 0, 200, 30, 0, 0, 1, 0, 0, 0, 0, []],
+				9,
+				55,
+				[
+				],
+				[
+				],
+				[
+					"Score: ",
+					0,
+					"bold 14pt Arial",
+					"rgb(204,255,153)",
+					0,
+					0,
+					0,
+					0,
+					0
+				]
+			]
 			],
 			[			]
 		]
@@ -31636,6 +32059,26 @@ cr.getProjectModel = function() { return [
 					1
 				]
 			]
+,			[
+				[12, 12, 0, 200, 30, 0, 0, 1, 0, 0, 0, 0, []],
+				9,
+				63,
+				[
+				],
+				[
+				],
+				[
+					"Score: ",
+					0,
+					"bold 14pt Arial",
+					"rgb(204,255,153)",
+					0,
+					0,
+					0,
+					0,
+					0
+				]
+			]
 			],
 			[			]
 		]
@@ -31720,1120 +32163,24 @@ cr.getProjectModel = function() { return [
 					0
 				]
 			]
-			],
-			[			]
-		]
-		],
-		[
-		],
-		[]
-	]
-,	[
-		"Layout 7",
-		800,
-		480,
-		false,
-		"GamePlay",
-		6228879569133269,
-		[
-		[
-			"BG",
-			0,
-			474719406707056,
-			true,
-			[255, 255, 255],
-			false,
-			1,
-			1,
-			1,
-			false,
-			1,
-			0,
-			0,
-			[
-			[
-				[0, 0, 0, 800, 480, 0, 0, 1, 0, 0, 0, 0, []],
-				3,
-				72,
+,			[
+				[281, 257, 0, 263, 30, 0, 0, 1, 0, 0, 0, 0, []],
+				9,
+				66,
 				[
 				],
 				[
 				],
 				[
+					"Score: ",
+					0,
+					"bold 14pt Arial",
+					"rgb(204,255,153)",
+					1,
+					0,
+					0,
 					0,
 					0
-				]
-			]
-,			[
-				[285, -147, 0, 64, 64, 0, 0, 1, 0.5, 0.5, 0, 0, []],
-				4,
-				118,
-				[
-				],
-				[
-				[
-					0,
-					0,
-					0,
-					16,
-					0.5,
-					0.2,
-					0,
-					0.01,
-					0,
-					0
-				]
-				],
-				[
-					0,
-					"Default",
-					0,
-					1
-				]
-			]
-,			[
-				[191, -145, 0, 64, 64, 0, 0, 1, 0.5, 0.5, 0, 0, []],
-				4,
-				119,
-				[
-				],
-				[
-				[
-					0,
-					0,
-					0,
-					8,
-					0.5,
-					0.2,
-					0,
-					0.01,
-					0,
-					0
-				]
-				],
-				[
-					0,
-					"Default",
-					2,
-					1
-				]
-			]
-,			[
-				[286, -77, 0, 64, 64, 0, 0, 1, 0.5, 0.5, 0, 0, []],
-				4,
-				120,
-				[
-				],
-				[
-				[
-					0,
-					0,
-					0,
-					4,
-					0.5,
-					0.2,
-					0,
-					0.01,
-					0,
-					0
-				]
-				],
-				[
-					0,
-					"Default",
-					3,
-					1
-				]
-			]
-,			[
-				[191, -75, 0, 64, 64, 0, 0, 1, 0.5, 0.5, 0, 0, []],
-				4,
-				121,
-				[
-				],
-				[
-				[
-					0,
-					0,
-					0,
-					2,
-					0.5,
-					0.2,
-					0,
-					0.01,
-					0,
-					0
-				]
-				],
-				[
-					0,
-					"Default",
-					1,
-					1
-				]
-			]
-			],
-			[			]
-		]
-,		[
-			"Main",
-			1,
-			9509403659637293,
-			true,
-			[255, 255, 255],
-			true,
-			1,
-			1,
-			1,
-			false,
-			1,
-			0,
-			0,
-			[
-			[
-				[558, 352, 0, 11.48912525177002, 11.48912525177002, 0, 0, 1, 0.5, 0.5, 0, 0, []],
-				0,
-				73,
-				[
-				],
-				[
-				[
-					0,
-					1,
-					0,
-					5,
-					0.5,
-					0.2,
-					0,
-					0.01,
-					1,
-					0
-				],
-				[
-					1
-				]
-				],
-				[
-					0,
-					"Default",
-					0,
-					1
-				]
-			]
-			],
-			[			]
-		]
-,		[
-			"trail",
-			2,
-			2538033012036709,
-			true,
-			[255, 255, 255],
-			true,
-			1,
-			1,
-			1,
-			false,
-			1,
-			0,
-			0,
-			[
-			[
-				[720.5606689453125, -26.81834411621094, 0, 4, 4, 0, 0, 0.300000011920929, 0.5, 0.5, 0, 0, []],
-				7,
-				77,
-				[
-				],
-				[
-				[
-					1,
-					5,
-					30,
-					29,
-					1
-				]
-				],
-				[
-					0,
-					"Default",
-					0,
-					1
-				]
-			]
-,			[
-				[178.942626953125, -1.136390686035156, 0, 368, 14, 0, 0, 1, 0.5, 0.5, 0, 0, []],
-				2,
-				78,
-				[
-				],
-				[
-				[
-					1
-				]
-				],
-				[
-					0,
-					"Default",
-					0,
-					1
-				]
-			]
-,			[
-				[406.488037109375, 480.681640625, 0, 806.72802734375, 13.99964904785156, 0, 0, 1, 0.5, 0.5, 0, 0, []],
-				2,
-				79,
-				[
-				],
-				[
-				[
-					1
-				]
-				],
-				[
-					0,
-					"Default",
-					0,
-					1
-				]
-			]
-,			[
-				[1.943450927734375, 237.9546813964844, 0, 492.183837890625, 13.99964904785156, 0, 1.570796370506287, 1, 0.5, 0.5, 0, 0, []],
-				2,
-				80,
-				[
-				],
-				[
-				[
-					1
-				]
-				],
-				[
-					0,
-					"Default",
-					0,
-					1
-				]
-			]
-,			[
-				[800.1268310546875, 234.3627624511719, 0, 485, 14, 0, 1.570796370506287, 1, 0.5, 0.5, 0, 0, []],
-				2,
-				81,
-				[
-				],
-				[
-				[
-					1
-				]
-				],
-				[
-					0,
-					"Default",
-					0,
-					1
-				]
-			]
-,			[
-				[644.5, 0, 0, 324, 14, 0, 0, 1, 0.5, 0.5, 0, 0, []],
-				2,
-				82,
-				[
-				],
-				[
-				[
-					1
-				]
-				],
-				[
-					0,
-					"Default",
-					0,
-					1
-				]
-			]
-			],
-			[			]
-		]
-,		[
-			"GUI",
-			3,
-			8818398878147432,
-			true,
-			[255, 255, 255],
-			true,
-			1,
-			1,
-			1,
-			false,
-			1,
-			0,
-			0,
-			[
-			[
-				[61.71641540527344, 131.3632659912109, 0, 30, 1, 0, 0, 1, 0, 0, 0, 0, []],
-				5,
-				75,
-				[
-				],
-				[
-				],
-				[
-					1,
-					"Default",
-					0,
-					1
-				]
-			]
-			],
-			[			]
-		]
-		],
-		[
-		],
-		[]
-	]
-,	[
-		"Layout 8",
-		800,
-		480,
-		false,
-		"GamePlay",
-		1300621475398602,
-		[
-		[
-			"BG",
-			0,
-			424908294532487,
-			true,
-			[255, 255, 255],
-			false,
-			1,
-			1,
-			1,
-			false,
-			1,
-			0,
-			0,
-			[
-			[
-				[0, 0, 0, 800, 480, 0, 0, 1, 0, 0, 0, 0, []],
-				3,
-				83,
-				[
-				],
-				[
-				],
-				[
-					0,
-					0
-				]
-			]
-			],
-			[			]
-		]
-,		[
-			"Main",
-			1,
-			8919949881811302,
-			true,
-			[255, 255, 255],
-			true,
-			1,
-			1,
-			1,
-			false,
-			1,
-			0,
-			0,
-			[
-			[
-				[617, 314, 0, 11.48912525177002, 11.48912525177002, 0, 0, 1, 0.5, 0.5, 0, 0, []],
-				0,
-				84,
-				[
-				],
-				[
-				[
-					0,
-					1,
-					0,
-					5,
-					0.5,
-					0.2,
-					0,
-					0.01,
-					1,
-					0
-				],
-				[
-					1
-				]
-				],
-				[
-					0,
-					"Default",
-					0,
-					1
-				]
-			]
-,			[
-				[511, 104, 0, 64, 64, 0, 0, 1, 0.5, 0.5, 0, 0, []],
-				4,
-				122,
-				[
-				],
-				[
-				[
-					0,
-					0,
-					0,
-					16,
-					0.5,
-					0.2,
-					0,
-					0.01,
-					0,
-					1
-				]
-				],
-				[
-					0,
-					"Default",
-					0,
-					1
-				]
-			]
-,			[
-				[245, 130, 0, 64, 64, 0, 0, 1, 0.5, 0.5, 0, 0, []],
-				4,
-				123,
-				[
-				],
-				[
-				[
-					0,
-					0,
-					0,
-					8,
-					0.5,
-					0.2,
-					0,
-					0.01,
-					0,
-					1
-				]
-				],
-				[
-					0,
-					"Default",
-					2,
-					1
-				]
-			]
-,			[
-				[406, 329, 0, 64, 64, 0, 0, 1, 0.5, 0.5, 0, 0, []],
-				4,
-				124,
-				[
-				],
-				[
-				[
-					0,
-					0,
-					0,
-					4,
-					0.5,
-					0.2,
-					0,
-					0.01,
-					0,
-					1
-				]
-				],
-				[
-					0,
-					"Default",
-					3,
-					1
-				]
-			]
-			],
-			[			]
-		]
-,		[
-			"trail",
-			2,
-			1865258392751036,
-			true,
-			[255, 255, 255],
-			true,
-			1,
-			1,
-			1,
-			false,
-			1,
-			0,
-			0,
-			[
-			[
-				[720.5606689453125, -26.81834411621094, 0, 4, 4, 0, 0, 0.300000011920929, 0.5, 0.5, 0, 0, []],
-				7,
-				88,
-				[
-				],
-				[
-				[
-					1,
-					5,
-					30,
-					29,
-					1
-				]
-				],
-				[
-					0,
-					"Default",
-					0,
-					1
-				]
-			]
-,			[
-				[53.942626953125, -1.136390686035156, 0, 118, 14, 0, 0, 1, 0.5, 0.5, 0, 0, []],
-				2,
-				89,
-				[
-				],
-				[
-				[
-					1
-				]
-				],
-				[
-					0,
-					"Default",
-					0,
-					1
-				]
-			]
-,			[
-				[406.488037109375, 480.681640625, 0, 806.72802734375, 13.99964904785156, 0, 0, 1, 0.5, 0.5, 0, 0, []],
-				2,
-				90,
-				[
-				],
-				[
-				[
-					1
-				]
-				],
-				[
-					0,
-					"Default",
-					0,
-					1
-				]
-			]
-,			[
-				[1.943450927734375, 237.9546813964844, 0, 492.183837890625, 13.99964904785156, 0, 1.570796370506287, 1, 0.5, 0.5, 0, 0, []],
-				2,
-				91,
-				[
-				],
-				[
-				[
-					1
-				]
-				],
-				[
-					0,
-					"Default",
-					0,
-					1
-				]
-			]
-,			[
-				[800.1268310546875, 234.3627624511719, 0, 485, 14, 0, 1.570796370506287, 1, 0.5, 0.5, 0, 0, []],
-				2,
-				92,
-				[
-				],
-				[
-				[
-					1
-				]
-				],
-				[
-					0,
-					"Default",
-					0,
-					1
-				]
-			]
-,			[
-				[523.5, -1, 0, 564, 14, 0, 0, 1, 0.5, 0.5, 0, 0, []],
-				2,
-				93,
-				[
-				],
-				[
-				[
-					1
-				]
-				],
-				[
-					0,
-					"Default",
-					0,
-					1
-				]
-			]
-			],
-			[			]
-		]
-,		[
-			"GUI",
-			3,
-			1892375011778207,
-			true,
-			[255, 255, 255],
-			true,
-			1,
-			1,
-			1,
-			false,
-			1,
-			0,
-			0,
-			[
-			[
-				[61.71641540527344, 131.3632659912109, 0, 30, 1, 0, 0, 1, 0, 0, 0, 0, []],
-				5,
-				86,
-				[
-				],
-				[
-				],
-				[
-					1,
-					"Default",
-					0,
-					1
-				]
-			]
-			],
-			[			]
-		]
-		],
-		[
-		],
-		[]
-	]
-,	[
-		"Layout 9",
-		800,
-		480,
-		false,
-		"GamePlay",
-		6568238633012689,
-		[
-		[
-			"BG",
-			0,
-			2214293375853174,
-			true,
-			[255, 255, 255],
-			false,
-			1,
-			1,
-			1,
-			false,
-			1,
-			0,
-			0,
-			[
-			[
-				[0, 0, 0, 800, 480, 0, 0, 1, 0, 0, 0, 0, []],
-				3,
-				94,
-				[
-				],
-				[
-				],
-				[
-					0,
-					0
-				]
-			]
-			],
-			[			]
-		]
-,		[
-			"Main",
-			1,
-			4049958950368273,
-			true,
-			[255, 255, 255],
-			true,
-			1,
-			1,
-			1,
-			false,
-			1,
-			0,
-			0,
-			[
-			[
-				[51.18202209472656, 130.3637237548828, 0, 11.48912525177002, 11.48912525177002, 0, 0, 1, 0.5, 0.5, 0, 0, []],
-				0,
-				95,
-				[
-				],
-				[
-				[
-					0,
-					1,
-					0,
-					5,
-					0.5,
-					0.2,
-					0,
-					0.01,
-					1,
-					0
-				],
-				[
-					1
-				]
-				],
-				[
-					0,
-					"Default",
-					0,
-					1
-				]
-			]
-,			[
-				[271, 238, 0, 182.3615112304688, 182.3615112304688, 0, 0, 1, 0.5, 0.5, 0, 0, []],
-				4,
-				96,
-				[
-				],
-				[
-				[
-					0,
-					0,
-					0,
-					2,
-					0.5,
-					0.2,
-					0,
-					0.01,
-					0,
-					1
-				]
-				],
-				[
-					0,
-					"Default",
-					1,
-					1
-				]
-			]
-,			[
-				[447, 393, 0, 84.38008880615234, 84.38008880615234, 0, 0, 1, 0.5, 0.5, 0, 0, []],
-				4,
-				98,
-				[
-				],
-				[
-				[
-					0,
-					0,
-					0,
-					2,
-					0.5,
-					0.2,
-					0,
-					0.01,
-					0,
-					1
-				]
-				],
-				[
-					0,
-					"Default",
-					2,
-					1
-				]
-			]
-,			[
-				[627, -150, 0, 64, 64, 0, 0, 1, 0.5, 0.5, 0, 0, []],
-				4,
-				126,
-				[
-				],
-				[
-				[
-					0,
-					0,
-					0,
-					16,
-					0.5,
-					0.2,
-					0,
-					0.01,
-					0,
-					0
-				]
-				],
-				[
-					0,
-					"Default",
-					0,
-					1
-				]
-			]
-,			[
-				[533, -148, 0, 64, 64, 0, 0, 1, 0.5, 0.5, 0, 0, []],
-				4,
-				127,
-				[
-				],
-				[
-				[
-					0,
-					0,
-					0,
-					8,
-					0.5,
-					0.2,
-					0,
-					0.01,
-					0,
-					0
-				]
-				],
-				[
-					0,
-					"Default",
-					2,
-					1
-				]
-			]
-,			[
-				[628, -80, 0, 64, 64, 0, 0, 1, 0.5, 0.5, 0, 0, []],
-				4,
-				128,
-				[
-				],
-				[
-				[
-					0,
-					0,
-					0,
-					4,
-					0.5,
-					0.2,
-					0,
-					0.01,
-					0,
-					0
-				]
-				],
-				[
-					0,
-					"Default",
-					3,
-					1
-				]
-			]
-,			[
-				[533, -78, 0, 64, 64, 0, 0, 1, 0.5, 0.5, 0, 0, []],
-				4,
-				129,
-				[
-				],
-				[
-				[
-					0,
-					0,
-					0,
-					2,
-					0.5,
-					0.2,
-					0,
-					0.01,
-					0,
-					0
-				]
-				],
-				[
-					0,
-					"Default",
-					1,
-					1
-				]
-			]
-			],
-			[			]
-		]
-,		[
-			"trail",
-			2,
-			9189981770633937,
-			true,
-			[255, 255, 255],
-			true,
-			1,
-			1,
-			1,
-			false,
-			1,
-			0,
-			0,
-			[
-			[
-				[720.5606689453125, -26.81834411621094, 0, 4, 4, 0, 0, 0.300000011920929, 0.5, 0.5, 0, 0, []],
-				7,
-				99,
-				[
-				],
-				[
-				[
-					1,
-					5,
-					30,
-					29,
-					1
-				]
-				],
-				[
-					0,
-					"Default",
-					0,
-					1
-				]
-			]
-,			[
-				[121, -1, 0, 250, 14, 0, 0, 1, 0.5, 0.5, 0, 0, []],
-				2,
-				100,
-				[
-				],
-				[
-				[
-					1
-				]
-				],
-				[
-					0,
-					"Default",
-					0,
-					1
-				]
-			]
-,			[
-				[406.488037109375, 480.681640625, 0, 806.72802734375, 13.99964904785156, 0, 0, 1, 0.5, 0.5, 0, 0, []],
-				2,
-				101,
-				[
-				],
-				[
-				[
-					1
-				]
-				],
-				[
-					0,
-					"Default",
-					0,
-					1
-				]
-			]
-,			[
-				[1.943450927734375, 237.9546813964844, 0, 492.183837890625, 13.99964904785156, 0, 1.570796370506287, 1, 0.5, 0.5, 0, 0, []],
-				2,
-				102,
-				[
-				],
-				[
-				[
-					1
-				]
-				],
-				[
-					0,
-					"Default",
-					0,
-					1
-				]
-			]
-,			[
-				[800.1268310546875, 234.3627624511719, 0, 485, 14, 0, 1.570796370506287, 1, 0.5, 0.5, 0, 0, []],
-				2,
-				103,
-				[
-				],
-				[
-				[
-					1
-				]
-				],
-				[
-					0,
-					"Default",
-					0,
-					1
-				]
-			]
-,			[
-				[590, -1, 0, 435, 14, 0, 0, 1, 0.5, 0.5, 0, 0, []],
-				2,
-				104,
-				[
-				],
-				[
-				[
-					1
-				]
-				],
-				[
-					0,
-					"Default",
-					0,
-					1
-				]
-			]
-			],
-			[			]
-		]
-,		[
-			"GUI",
-			3,
-			3362587005138792,
-			true,
-			[255, 255, 255],
-			true,
-			1,
-			1,
-			1,
-			false,
-			1,
-			0,
-			0,
-			[
-			[
-				[61.71641540527344, 131.3632659912109, 0, 30, 1, 0, 0, 1, 0, 0, 0, 0, []],
-				5,
-				97,
-				[
-				],
-				[
-				],
-				[
-					1,
-					"Default",
-					0,
-					1
 				]
 			]
 			],
@@ -32850,6 +32197,20 @@ cr.getProjectModel = function() { return [
 		"GamePlay",
 		[
 		[
+			1,
+			"Tries",
+			0,
+			0,
+false,false,1251918581058273,false
+		]
+,		[
+			1,
+			"Score",
+			0,
+			0,
+false,false,6605284285430537,false
+		]
+,		[
 			1,
 			"LAUNCHSPEED",
 			0,
@@ -32943,6 +32304,111 @@ false,true,5840243009066268,false
 ,				[
 					3,
 					0
+				]
+				]
+			]
+,			[
+				-1,
+				cr.system_object.prototype.acts.SetVar,
+				null,
+				8996293013921194,
+				false
+				,[
+				[
+					11,
+					"Tries"
+				]
+,				[
+					7,
+					[
+						0,
+						1
+					]
+				]
+				]
+			]
+,			[
+				9,
+				cr.plugins_.Text.prototype.acts.SetText,
+				null,
+				325577757923668,
+				false
+				,[
+				[
+					7,
+					[
+						10,
+						[
+							2,
+							"Score: "
+						]
+						,[
+							23,
+							"Score"
+						]
+					]
+				]
+				]
+			]
+,			[
+				-1,
+				cr.system_object.prototype.acts.SetTimescale,
+				null,
+				9408811880401853,
+				false
+				,[
+				[
+					0,
+					[
+						0,
+						4
+					]
+				]
+				]
+			]
+,			[
+				10,
+				cr.plugins_.WebStorage.prototype.acts.StoreLocal,
+				null,
+				3918978012885073,
+				false
+				,[
+				[
+					1,
+					[
+						2,
+						"Layout"
+					]
+				]
+,				[
+					7,
+					[
+						19,
+						cr.system_object.prototype.exps.layoutname
+					]
+				]
+				]
+			]
+,			[
+				10,
+				cr.plugins_.WebStorage.prototype.acts.StoreLocal,
+				null,
+				3264502358388307,
+				false
+				,[
+				[
+					1,
+					[
+						2,
+						"Score"
+					]
+				]
+,				[
+					7,
+					[
+						23,
+						"Score"
+					]
 				]
 				]
 			]
@@ -33476,6 +32942,39 @@ false,true,5840243009066268,false
 				]
 				]
 			]
+,			[
+				-1,
+				cr.system_object.prototype.acts.AddVar,
+				null,
+				1848099701218612,
+				false
+				,[
+				[
+					11,
+					"Score"
+				]
+,				[
+					7,
+					[
+						19,
+						cr.system_object.prototype.exps.round
+						,[
+[
+							7,
+							[
+								0,
+								1000
+							]
+							,[
+								23,
+								"Tries"
+							]
+						]
+						]
+					]
+				]
+				]
+			]
 			]
 		]
 ,		[
@@ -33548,6 +33047,26 @@ false,true,5840243009066268,false
 				[
 					3,
 					0
+				]
+				]
+			]
+,			[
+				-1,
+				cr.system_object.prototype.acts.AddVar,
+				null,
+				1571156287906126,
+				false
+				,[
+				[
+					11,
+					"Tries"
+				]
+,				[
+					7,
+					[
+						0,
+						1
+					]
 				]
 				]
 			]
@@ -33626,6 +33145,26 @@ false,true,5840243009066268,false
 				]
 				]
 			]
+,			[
+				-1,
+				cr.system_object.prototype.acts.AddVar,
+				null,
+				9064094399964889,
+				false
+				,[
+				[
+					11,
+					"Tries"
+				]
+,				[
+					7,
+					[
+						0,
+						1
+					]
+				]
+				]
+			]
 			]
 		]
 		]
@@ -33695,16 +33234,125 @@ false,true,5840243009066268,false
 				]
 				],
 				[
+				]
+				,[
 				[
-					-1,
-					cr.system_object.prototype.acts.NextPrevLayout,
+					0,
 					null,
-					3976046746293893,
-					false
-					,[
+					false,
+					null,
+					1952897871463516,
 					[
-						3,
-						0
+					[
+						10,
+						cr.plugins_.WebStorage.prototype.cnds.LocalStorageExists,
+						null,
+						0,
+						false,
+						false,
+						false,
+						7092278363610411,
+						false
+						,[
+						[
+							1,
+							[
+								2,
+								"Layout"
+							]
+						]
+						]
+					]
+					],
+					[
+					[
+						-1,
+						cr.system_object.prototype.acts.GoToLayoutByName,
+						null,
+						3976046746293893,
+						false
+						,[
+						[
+							1,
+							[
+								20,
+								10,
+								cr.plugins_.WebStorage.prototype.exps.LocalValue,
+								true,
+								null
+								,[
+[
+									2,
+									"Layout"
+								]
+								]
+							]
+						]
+						]
+					]
+,					[
+						-1,
+						cr.system_object.prototype.acts.SetVar,
+						null,
+						9455758296586136,
+						false
+						,[
+						[
+							11,
+							"Score"
+						]
+,						[
+							7,
+							[
+								20,
+								10,
+								cr.plugins_.WebStorage.prototype.exps.LocalValue,
+								true,
+								null
+								,[
+[
+									2,
+									"Score"
+								]
+								]
+							]
+						]
+						]
+					]
+					]
+				]
+,				[
+					0,
+					null,
+					false,
+					null,
+					134212908105259,
+					[
+					[
+						-1,
+						cr.system_object.prototype.cnds.Else,
+						null,
+						0,
+						false,
+						false,
+						false,
+						8763009148468587,
+						false
+					]
+					],
+					[
+					[
+						-1,
+						cr.system_object.prototype.acts.NextPrevLayout,
+						null,
+						2839982341524016,
+						false
+						,[
+						[
+							3,
+							0
+						]
+						]
 					]
 					]
 				]
@@ -33732,6 +33380,26 @@ false,true,5840243009066268,false
 				[
 				[
 					-1,
+					cr.system_object.prototype.acts.SetVar,
+					null,
+					8006851484249075,
+					false
+					,[
+					[
+						11,
+						"Score"
+					]
+,					[
+						7,
+						[
+							0,
+							0
+						]
+					]
+					]
+				]
+,				[
+					-1,
 					cr.system_object.prototype.acts.GoToLayout,
 					null,
 					4295414710730808,
@@ -33741,6 +33409,51 @@ false,true,5840243009066268,false
 						6,
 						"Layout 1"
 					]
+					]
+				]
+				]
+			]
+			]
+		]
+,		[
+			0,
+			null,
+			false,
+			null,
+			6192489652583967,
+			[
+			[
+				-1,
+				cr.system_object.prototype.cnds.OnLayoutStart,
+				null,
+				1,
+				false,
+				false,
+				false,
+				6574981265232193,
+				false
+			]
+			],
+			[
+			[
+				9,
+				cr.plugins_.Text.prototype.acts.SetText,
+				null,
+				9558243768961848,
+				false
+				,[
+				[
+					7,
+					[
+						10,
+						[
+							2,
+							"Score: "
+						]
+						,[
+							23,
+							"Score"
+						]
 					]
 				]
 				]
