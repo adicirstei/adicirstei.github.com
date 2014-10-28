@@ -11,14 +11,14 @@ html.no-hjs
     meta(name="mobile-web-app-capable", content="yes")
     meta(name="apple-mobile-web-app-capable", content="yes")
     meta(name="apple-mobile-web-app-status-bar-style", content="black")
-    meta(name="apple-mobile-web-app-title", content="")   
+    meta(name="apple-mobile-web-app-title", content="")
     block seo
       title adicirstei home page
       meta(name='description', content='adicirstei home page and blog')
     link(rel='stylesheet', href='/styles/style.css')
     link(rel='stylesheet', href='/styles/desktop.css', media='(min-width: 48em)')
-    
-    
+
+
     script(type='text/javascript').
         (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
           (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
@@ -26,7 +26,7 @@ html.no-hjs
           })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
 
           ga('create', 'UA-3192288-13', 'adicirstei.github.io');
-          ga('send', 'pageview');    
+          ga('send', 'pageview');
   body
     block header
       header
@@ -44,13 +44,21 @@ html.no-hjs
             li
               a.menuitem(href='/') home
             li
-              a.menuitem(href='/games/') games              
+              a.menuitem(href='/games/') games
       section
         block content
       section
         block about
+      section
+        script(async src='//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js'
+
+        // mobile-blog 
+        ins.adsbygoogle(style="display:inline-block;width:320px;height:100px" data-ad-client="ca-pub-3072953611703815"  data-ad-slot="9331535485")
+        script
+          (adsbygoogle = window.adsbygoogle || []).push({});
+
       footer
-        p Project maintained by 
+        p Project maintained by
           a(href='https://github.com/adicirstei') adicirstei
 
 
