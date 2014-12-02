@@ -1,0 +1,15 @@
+{
+	"name": "PhGravity",
+	"description": "gravity simulator",
+	"version": "0.1.1",
+	"launch_path": "/index.html",
+
+	"developer": {
+		"name": "Adrian Cirstei",
+		"url": "http://www.cirstei.ro"
+	},
+    "icons": {
+      "32": "/assets/satelite.png"
+    },
+	"installs_allowed_from": ["*"]
+}
