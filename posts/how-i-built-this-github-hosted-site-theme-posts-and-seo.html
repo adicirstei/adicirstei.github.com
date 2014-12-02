@@ -1,0 +1,63 @@
+<!DOCTYPE html><html class="no-hjs"><head><meta charset="utf-8"><meta name="HandheldFriendly" content="True"><meta name="MobileOptimized" content="320"><meta name="viewport" content="width=device-width, initial-scale=1, minimal-ui"><meta http-equiv="cleartype" content="on"><meta name="msapplication-TileImage" content="/images/touch/apple-touch-icon-144x144-precomposed.png"><meta name="msapplication-TileColor" content="#222222"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content=""><title>adicirstei/blog/How I built this GitHub hosted site - theme, posts and SEO</title><meta name="description" content="adicirstei home page and blog and;I am not a web designer. I dont have that eye for colors, layout and typoghraphy. I know only some basic CSS. In order to have a decent looking website, I have downloaded a GitHub provided theme and translated it to Jade . This allowed me to reuse the template easily for all my pages.; How I built this GitHub hosted site - theme, posts and SEO"><link rel="stylesheet" href="/styles/style.css"><link rel="stylesheet" href="/styles/desktop.css" media="(min-width: 48em)"><script type="text/javascript">(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  
+  ga('create', 'UA-3192288-13', 'adicirstei.github.io');
+  ga('send', 'pageview');</script></head><body><header><h1>adicirstei</h1><p>backend developer</p><a href="#" class="navtoggle">toggle</a><nav><ul><!--input(type='text')--><li><a href="/#about-me" class="menuitem">about</a></li><li><a href="/posts/" class="menuitem">blog</a></li><li><a href="/" class="menuitem">home</a></li><li><a href="/games/" class="menuitem">games</a></li></ul></nav></header><section><article><date>2014-06-01</date><h2 id="how-i-built-this-github-hosted-site-theme-posts-and-seo">How I built this GitHub hosted site - theme, posts and SEO</h2>
+<p>I am not a web designer. I don&#39;t have that eye for colors, layout and typoghraphy. I know only some basic CSS. In order to have a decent looking website, I have downloaded a GitHub provided theme and translated it to <a href="http://jade-lang.com/">Jade</a>. This allowed me to reuse the template easily for all my pages.</p>
+<p><code>layout.jade</code></p>
+<pre><code class="lang-jade">doctype html
+html(lang<span class="hljs-subst">=</span><span class="hljs-string">"en"</span>)
+  head
+<span class="hljs-attribute">...</span><span class="hljs-attribute">...</span><span class="hljs-attribute">...</span><span class="hljs-attribute">...</span><span class="hljs-built_in">.</span>
+    block seo
+      title adicirstei home page
+      meta(name<span class="hljs-subst">=</span><span class="hljs-string">'description'</span>, content<span class="hljs-subst">=</span><span class="hljs-string">'adicirstei home page and blog'</span>)
+    <span class="hljs-keyword">link</span>(rel<span class="hljs-subst">=</span><span class="hljs-string">'stylesheet'</span>, href<span class="hljs-subst">=</span><span class="hljs-string">'/styles/style.css'</span>)
+<span class="hljs-attribute">...</span><span class="hljs-attribute">...</span><span class="hljs-attribute">...</span><span class="hljs-attribute">...</span><span class="hljs-built_in">.</span>
+body
+<span class="hljs-attribute">...</span><span class="hljs-attribute">...</span><span class="hljs-attribute">...</span><span class="hljs-attribute">...</span><span class="hljs-built_in">.</span>
+        section
+          block content
+<span class="hljs-attribute">...</span><span class="hljs-attribute">...</span><span class="hljs-attribute">...</span><span class="hljs-attribute">...</span><span class="hljs-built_in">.</span>
+</code></pre>
+<p>And then, In my post page i just have something like this:</p>
+<pre><code class="lang-jade">extends layout
+block seo
+  title <span class="hljs-operator">the</span> title <span class="hljs-operator">of</span> my <span class="hljs-built_in">post</span>
+  meta(name=<span class="hljs-string">'description'</span>, content=<span class="hljs-string">'a short description of my post'</span>)
+block content
+  <span class="hljs-built_in">include</span>:md <span class="hljs-number">20140601001.</span>md
+</code></pre>
+<p>But how do I get the blog title, description and file name, you might wonder. This is where the <a href="https://github.com/geejs/gulp-tap">gulp tap plugin</a> came to the rescue. This simple plugin allows one to &#39;tap&#39; into the streams of gulp task and take a look at the file contents and name.</p>
+<pre><code class="lang-js">gulp.src(<span class="hljs-string">'src/posts/*.md'</span>)
+  .pipe(tap(<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-params">(file, t)</span> </span>{
+    <span class="hljs-keyword">var</span> filename = path.basename(file.path, <span class="hljs-string">'.md'</span>),
+      contents = file.contents,
+      title = contents.toString().split(<span class="hljs-string">'\n'</span>)[<span class="hljs-number">0</span>] || filename,
+      newfile = filename;
+    title = title.replace(<span class="hljs-regexp">/^#*\s*/g</span>, <span class="hljs-string">''</span>).trim().replace(<span class="hljs-regexp">/\[([^\]]*)\]\([^)]*\)/g</span>, <span class="hljs-string">'$1'</span>);
+    file.contents = <span class="hljs-keyword">new</span> Buffer(<span class="hljs-string">"extends layout\nblock seo\n  title adicirstei/blog/"</span> + title +
+                               <span class="hljs-string">"\n  meta(name='description', content='adicirstei home page and blog and "</span> + title +
+                               <span class="hljs-string">"')\nblock content\n  article\n    include:md "</span> + path.basename(file.path));
+    newfile = title.replace(<span class="hljs-regexp">/(\s|-|_)+/g</span>, <span class="hljs-string">'-'</span>).toLowerCase();
+    file.path = file.path.replace(filename, newfile);
+  }))
+  .pipe(jade({
+    locals: YOUR_LOCALS,
+    md: marked
+  }))
+  .pipe(gulp.dest(<span class="hljs-string">'./www/posts'</span>));
+</code></pre>
+<p>So, what&#39;s going on here? For each <code>*.md</code> file I have in posts folder, I peek into the file content, pick the first line strip it off some markdown and use it both as title and description for the <code>meta</code> tag. Then I create a new content <code>Buffer</code> with the post template and pass it down the pipe to <a href="https://github.com/phated/gulp-jade">gulp-jade</a> plugin. In order to obtain a SEF url, I also replace the file name with a one creaded based on the post title.</p>
+<p>I&#39;m not sure if this is the best approach, but it&#39;s getting the job done and that&#39;s what mattered for me at the time. My goal was to get up and runnig as fast as possible a web site. And this is what I get.</p>
+<p>I hope my sollution to the problem to be of some use for you also.</p>
+<h3 id="in-the-same-series">In the same series</h3>
+<ul>
+<li><a href="/posts/how-i-built-the-present-github-userpage-static-site.html">How I built the present GitHub userpage static site</a></li>
+<li><a href="/posts/how-i-built-a-github-hosted-site-the-tools.html">How I built a GitHub hosted site - the tools</a></li>
+<li><a href="/posts/how-i-built-this-github-hosted-site-theme-posts-and-seo.html">How I built this GitHub hosted site - theme, posts and SEO</a></li>
+</ul>
+</article></section><section></section><section><script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script><!-- mobile-blog--><ins style="display:inline-block;width:320px;height:100px" data-ad-client="ca-pub-3072953611703815" data-ad-slot="9331535485" class="adsbygoogle"></ins><script>(adsbygoogle = window.adsbygoogle || []).push({});
+</script></section><footer><p>Project maintained by<a href="https://github.com/adicirstei">adicirstei</a></p></footer><script src="/scripts/app.js"></script></body></html>
